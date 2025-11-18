@@ -750,3 +750,4 @@ thumb
 sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/node,python,csharp,dotnetcore,go,react
+.idea/
