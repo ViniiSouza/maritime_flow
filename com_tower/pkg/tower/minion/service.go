@@ -10,13 +10,13 @@ import (
 
 type service struct {
 	integration integration
-	repository *repository
+	repository  *repository
 }
 
 func newService(i integration, r *repository) service {
 	return service{
 		integration: i,
-		repository: r,
+		repository:  r,
 	}
 }
 
@@ -36,10 +36,29 @@ func (s service) SyncStructures(structures structure.Structures) {
 	s.repository.SyncStructures(structures)
 }
 
-func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotRequest) (slot.SlotResponse, error) {
+func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotRequest) (*slot.SlotResponse, error) {
 	result, err := s.integration.RequestSlotToStructure(ctx, request)
 	if err != nil {
-		return slot.SlotResponse{}, err
+		return nil, err
+	}
+
+	if result.State == slot.FreeSlotState {
+		acquireRequest := slot.AcquireSlotRequest{
+			VehicleUuid:          request.VehicleUuid,
+			StructureUuid:        request.StructureUuid,
+			StructureSlotRequest: request.StructureSlotRequest,
+		}
+
+		acquireResult, err := s.integration.AcquireSlotLockInTowerLeader(ctx, acquireRequest)
+		if err != nil {
+			return nil, err
+		}
+
+		if acquireResult.Result == slot.UnavailableAcquireSlotResultType {
+			return &slot.SlotResponse{
+				State: slot.InUseSlotState,
+			}, nil
+		}
 	}
 
 	return result, nil
