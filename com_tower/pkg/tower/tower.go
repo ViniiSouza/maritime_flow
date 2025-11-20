@@ -12,6 +12,6 @@ type TowerHealthRequest struct {
 	Id string `json:"tower_id"`
 }
 
-type TowersResponse struct {
+type TowersPayload struct {
 	Towers []Tower `json:"towers"`
 }

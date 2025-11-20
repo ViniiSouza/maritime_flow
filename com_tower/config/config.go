@@ -13,15 +13,51 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
-type Config struct {
-	Id uuid.UUID
-	DB *pgx.Conn
+var Configuration *Config
 
-	PropagationInterval time.Duration
-	HeartbeatTimeout    time.Duration
+type Config struct {
+	id         uuid.UUID
+	db         *pgx.Conn
+	baseDns    string
+	leaderUuid uuid.UUID
+
+	propagationInterval time.Duration
+	heartbeatTimeout    time.Duration
 }
 
-func InitConfig(ctx context.Context) Config {
+func (c *Config) GetId() uuid.UUID {
+	return c.id
+}
+
+func (c *Config) GetIdAsString() string {
+	return c.id.String()
+}
+
+func (c *Config) GetDBConn() *pgx.Conn {
+	return c.db
+}
+
+func (c *Config) GetBaseDns() string {
+	return c.baseDns
+}
+
+func (c *Config) GetLeaderUUID() uuid.UUID {
+	return c.leaderUuid
+}
+
+func (c *Config) SetLeaderUUID(id uuid.UUID) {
+	c.leaderUuid = id
+}
+
+func (c *Config) GetPropagationInterval() time.Duration {
+	return c.propagationInterval
+}
+
+func (c *Config) GetHeartbeatTimeout() time.Duration {
+	return c.heartbeatTimeout
+}
+
+func InitConfig(ctx context.Context) {
 	id, err := uuid.Parse(os.Getenv(utils.TowerIdEnv))
 	if err != nil {
 		log.Fatalf("invalid id %s in env %s: %v", id, utils.TowerIdEnv, err)
@@ -31,6 +67,8 @@ func InitConfig(ctx context.Context) Config {
 	if err != nil {
 		log.Fatalf("failed to establish database connection: %v", err)
 	}
+
+	dns := os.Getenv(utils.BaseDnsEnv)
 
 	interval, err := strconv.Atoi(os.Getenv(utils.PropagationIntervalEnv))
 	if err != nil {
@@ -45,10 +83,11 @@ func InitConfig(ctx context.Context) Config {
 	}
 
 	heartbeatTimeout := time.Duration(timeout) * time.Second
-	return Config{
-		Id:                  id,
-		DB:                  conn,
-		PropagationInterval: propagationInterval,
-		HeartbeatTimeout:    heartbeatTimeout,
+	Configuration = &Config{
+		id:                  id,
+		db:                  conn,
+		baseDns:             dns,
+		propagationInterval: propagationInterval,
+		heartbeatTimeout:    heartbeatTimeout,
 	}
 }

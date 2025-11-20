@@ -1,28 +1,35 @@
 package leader
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
-func InitLeader(ctx context.Context, cfg config.Config) error {
-	go serve(cfg)
+var (
+	client = &http.Client{}
+)
 
-	go propagate(ctx, cfg)
+func InitLeader(ctx context.Context) error {
+	go serve()
+	go propagate(ctx)
 
 	return nil
 }
 
-func serve(cfg config.Config) {
+func serve() {
 	server := &http.Server{
-		Handler:        setupRouter(cfg),
+		Handler:        setupRouter(),
 		Addr:           fmt.Sprintf(":%s", os.Getenv(utils.PortEnv)),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
@@ -34,8 +41,8 @@ func serve(cfg config.Config) {
 	}
 }
 
-func propagate(ctx context.Context, cfg config.Config) {
-	repo := newRepository(cfg.DB)
+func propagate(ctx context.Context) {
+	repo := newRepository()
 	service := newService(repo)
 
 	for {
@@ -44,9 +51,15 @@ func propagate(ctx context.Context, cfg config.Config) {
 			return
 		
 		default:
-			healthyTowers, err := service.ListHealthyTowers(ctx, cfg.HeartbeatTimeout)
+			healthyTowers, err := service.ListHealthyTowers(ctx, config.Configuration.GetHeartbeatTimeout())
 			if err != nil {
 				log.Printf("[leader][propagate] failed to list healthy towers: %v", err)
+				break
+			}
+
+			towersPayload, err := json.Marshal(tower.TowersPayload{Towers: healthyTowers})
+			if err != nil {
+				log.Printf("[leader][propagate] failed to marshal healthy towers payload: %v", err)
 				break
 			}
 
@@ -55,8 +68,48 @@ func propagate(ctx context.Context, cfg config.Config) {
 				log.Printf("[leader][propagate] failed to list structures: %v", err)
 				break
 			}
+
+			structuresPayload, err := json.Marshal(structures)
+			if err != nil {
+				log.Printf("[leader][propagate] failed to marshal structures payload: %v", err)
+				break
+			}
+
+			for _, tower := range healthyTowers {
+				baseEndpoint := fmt.Sprintf("%s.tower.%s", tower.Uuid.String(), config.Configuration.GetBaseDns())
+				towersEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.TowersPropagationPath)
+				structuresEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.StructuresPropagationPath)
+
+				if err := doPropagateReq(ctx, towersEndpoint, towersPayload); err != nil {
+					log.Printf("[leader][propagate] failed to propagate healthy towers to tower %s: %v", tower.Uuid.String(), err)
+				}
+
+				if err := doPropagateReq(ctx, structuresEndpoint, structuresPayload); err != nil {
+					log.Printf("[leader][propagate] failed to propagate structures to tower %s: %v", tower.Uuid.String(), err)
+				}
+			}
 		}
 
-		time.Sleep(cfg.PropagationInterval)
+		time.Sleep(config.Configuration.GetPropagationInterval())
 	}
-} 
+}
+
+func doPropagateReq(ctx  context.Context, endpoint string, payload []byte) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create propagation request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute propagation request: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	if _, err = io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return nil
+}

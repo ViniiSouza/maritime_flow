@@ -2,7 +2,10 @@ package leader
 
 import (
 	"context"
+	"errors"
 
+	"github.com/ViniiSouza/maritime_flow/com_tower/config"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/google/uuid"
@@ -13,9 +16,9 @@ type repository struct {
 	DB *pgx.Conn
 }
 
-func newRepository(db *pgx.Conn) repository {
+func newRepository() repository {
 	return repository{
-		DB: db,
+		DB: config.Configuration.GetDBConn(),
 	}
 }
 
@@ -58,4 +61,27 @@ func (r repository) ListCentrals(ctx context.Context) ([]structure.Central, erro
 	}
 
 	return pgx.CollectRows(rows, pgx.RowToStructByName[structure.Central])
+}
+
+func (r repository) GetSlotUUID(ctx context.Context, data slot.AcquireSlotRequest) (slotUuid uuid.UUID, err error) {
+	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3", data.StructureUuid, data.SlotType, data.SlotNumber).Scan(&slotUuid)
+	return
+}
+
+func (r repository) CheckSlotAvailability(ctx context.Context, slotUuid uuid.UUID) (isAvailable bool, err error) {
+	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1)", slotUuid).Scan(&isAvailable)
+	return
+}
+
+func (r repository) AcquireSlot(ctx context.Context, vehicleUuid string, slotUuid uuid.UUID) error {
+	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = $1 WHERE id = $2", slotUuid, vehicleUuid)
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return errors.New("no rows affected, slot was not acquired")
+	}
+
+	return nil
 }

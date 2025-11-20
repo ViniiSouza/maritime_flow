@@ -2,6 +2,13 @@ package structure
 
 import "github.com/google/uuid"
 
+type StructureType string
+
+const (
+	PlatformStructureType StructureType = "platform"
+	CentralStructureType  StructureType = "central"
+)
+
 type slots struct {
 	DocksQtt    int `json:"docks_qtt"`
 	HelipadsQtt int `json:"helipads_qtt"`

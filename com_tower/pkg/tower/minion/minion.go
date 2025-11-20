@@ -7,11 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
-func InitMinion(ctx context.Context, cfg config.Config) error {
+func InitMinion(ctx context.Context) error {
 	go serve()
 
 	return nil

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/google/uuid"
@@ -56,4 +57,30 @@ func (s service) ListStructures(ctx context.Context) (*structure.Structures, err
 		Platforms: platforms,
 		Centrals:  centrals,
 	}, nil
+}
+
+func (s service) AcquireSlot(ctx context.Context, request slot.AcquireSlotRequest) (*slot.AcquireSlotResponse, error) {
+	slotUuid, err := s.repository.GetSlotUUID(ctx, request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get slot uuid: %w", err)
+	}
+
+	isSlotAvailable, err := s.repository.CheckSlotAvailability(ctx, slotUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check slot %s availability: %w", slotUuid, err)
+	}
+
+	if !isSlotAvailable {
+		return &slot.AcquireSlotResponse{
+			Result: slot.UnavailableAcquireSlotResultType,
+		}, nil
+	}
+
+	if err := s.repository.AcquireSlot(ctx, request.VehicleUuid, slotUuid); err != nil {
+		return nil, fmt.Errorf("failed to acquire slot %s: %w", slotUuid, err)
+	}
+
+	return &slot.AcquireSlotResponse{
+		Result: slot.AcquiredAcquireSlotResultType,
+	}, nil 
 }

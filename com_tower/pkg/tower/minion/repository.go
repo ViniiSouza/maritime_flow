@@ -10,17 +10,25 @@ type repository struct {
 	structures structure.Structures
 }
 
-func newRepository() repository {
-	return repository{
+func newRepository() *repository {
+	return &repository{
 		towers: []tower.Tower{},
 		structures: structure.Structures{},
 	}
 }
 
-func (r repository) ListTowers() []tower.Tower {
+func (r *repository) ListTowers() []tower.Tower {
 	return r.towers
 }
 
-func (r repository) ListStructures() structure.Structures {
+func (r *repository) ListStructures() structure.Structures {
 	return r.structures
+}
+
+func (r *repository) SyncTowers(towers tower.TowersPayload) {
+	r.towers = towers.Towers
+}
+
+func (r *repository) SyncStructures(structures structure.Structures) {
+	r.structures = structures
 }

@@ -10,17 +10,25 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower/minion"
 )
 
+var (
+	isLeader = false
+)
+
 func main() {
 	ctx := context.Background()
-	cfg := config.InitConfig(ctx)
-	isLeader := leaderelection.AcquireLock(ctx, cfg)
+	config.InitConfig(ctx)
+	leaderUuid := leaderelection.TryAcquireLockAndReturnLeaderUUID(ctx)
+	config.Configuration.SetLeaderUUID(leaderUuid)
+	if leaderUuid == config.Configuration.GetId() {
+		isLeader = true
+	} 
 
 	if isLeader {
-		if err := leader.InitLeader(ctx, cfg); err != nil {
+		if err := leader.InitLeader(ctx); err != nil {
 			log.Fatalf("failed to initialize leader tower: %v", err)
 		}
 	} else {
-		if err := minion.InitMinion(); err != nil {
+		if err := minion.InitMinion(ctx); err != nil {
 			log.Fatalf("failed to initialize minion tower: %v", err)
 		}
 	}
