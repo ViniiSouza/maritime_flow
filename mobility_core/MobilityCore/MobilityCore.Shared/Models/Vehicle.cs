@@ -2,13 +2,15 @@ namespace MobilityCore.Shared.Models;
 
 public class Vehicle
 {
+    public string Uuid { get; set; }
     public VehicleType Type { get; set; }
     public double Velocity { get; set; }
     public GeoPoint Position { get; set; }
     public StatusMovimento Status { get; set; }
 
-    public Vehicle(VehicleType type, double lat, double lon)
+    public Vehicle(VehicleType type, double lat, double lon, string? uuid = null)
     {
+        Uuid = uuid ?? Guid.NewGuid().ToString("N");
         Type = type;
         Velocity = type == VehicleType.Helicopter ? 80 : 50;
         Position = new GeoPoint(lat, lon);
