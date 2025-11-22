@@ -4,7 +4,8 @@ Responsável por verificar disponibilidade de slots (helipads/docks)
 """
 
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+from starlette.status import HTTP_204_NO_CONTENT
 from pydantic import BaseModel
 from enum import Enum
 from typing import Dict, List
@@ -84,6 +85,27 @@ async def check_slot(request: SlotRequest):
     
     return SlotResponse(state=state)
 
+@app.post("/release-slot")
+async def check_slot(request: SlotRequest):
+    """
+    Endpoint para liberar um slot em específico
+    Chamado pela Torre (T) quando a mesma identifica que
+    o veículo liberou o slot
+    """
+    slot_type = request.slot_type.value  
+    
+    if slot_type not in slots:
+        raise HTTPException(status_code=500, detail="Internal error: slot type not initialized")
+    
+    if request.slot_number < 0 or request.slot_number >= len(slots[slot_type]):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Slot {request.slot_number} of type {slot_type} not found"
+        )
+    
+    slots[slot_type][request.slot_number] = FREE
+    
+    return Response(status_code=HTTP_204_NO_CONTENT)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
