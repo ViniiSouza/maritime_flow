@@ -2,8 +2,11 @@ package minion
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
+	"github.com/ViniiSouza/maritime_flow/com_tower/config"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/leaderelection"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/gin-gonic/gin"
@@ -85,4 +88,52 @@ func (h handler) CheckSlotAvailability(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+func (h handler) HandleElection(ctx *gin.Context) {
+	var req types.ElectionRequest
+	if err := ctx.ShouldBindJSON(req); err != nil {
+		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
+		return
+	}
+
+	uptime := config.Configuration.GetUptimeSeconds()
+
+	var electionResp types.ElectionResponse
+	if uptime > req.CandidateUptime {
+		log.Printf("[minion][election] my uptime (%.2fs) > candidate's uptime (%.2fs): starting my own election", uptime, req.CandidateUptime)
+		if !config.Configuration.IsLeader() {
+			go leaderelection.StartElection(h.service.ListTowers())
+		}
+		electionResp = types.ElectionResponse{
+			Uptime:          uptime,
+			HasHigherUptime: true,
+		}
+	} else {
+		log.Printf("my uptime (%.2fs) <= candidate's uptime (%.2fs): confirming vote in candidate", uptime, req.CandidateUptime)
+		electionResp = types.ElectionResponse{
+			Uptime:          uptime,
+			HasHigherUptime: false,
+		}
+	}
+
+	response, err := json.Marshal(electionResp)
+	if err != nil {
+		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (h handler) SetNewLeader(ctx *gin.Context) {
+	var req types.NewLeaderRequest
+	if err := ctx.ShouldBindJSON(req); err != nil {
+		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
+		return
+	}
+
+	config.Configuration.SetLeaderUUID(req.NewLeaderUUID)
+
+	ctx.JSON(http.StatusNoContent, nil)
 }

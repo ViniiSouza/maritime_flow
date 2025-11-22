@@ -10,6 +10,7 @@ import (
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
 type integration struct {
@@ -90,7 +91,7 @@ func (i integration) SendHealthCheck(ctx context.Context) error {
 
 	resp, err := i.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to execute healthcheck request for tower %s: %w", config.Configuration.GetIdAsString(), err)
+		return fmt.Errorf("tower %s: %w: %w", config.Configuration.GetIdAsString(), utils.ErrLeaderUnreachable, err)
 	}
 
 	defer resp.Body.Close()

@@ -95,3 +95,42 @@ func (r repository) ReleaseSlot(ctx context.Context, vehicleUuid types.UUID, slo
 
 	return nil
 }
+
+func (r repository) AcquireLock(ctx context.Context) error {
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id IS NULL OR renewed_at < (NOW() - ($2 || ' seconds')::interval);;", config.Configuration.GetId(), config.Configuration.GetRenewLockTimeout())
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return errors.New("no rows affected, lock was not acquired")
+	}
+
+	return nil
+}
+
+func (r repository) ReleaseLock(ctx context.Context) error {
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = NULL WHERE leader_id = $1;", config.Configuration.GetId())
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return errors.New("no rows affected, lock was not released")
+	}
+
+	return nil
+}
+
+func (r repository) RenewLock(ctx context.Context) error {
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id = $1;", config.Configuration.GetId())
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return errors.New("no rows affected, lock was not renewed")
+	}
+
+	return nil
+}

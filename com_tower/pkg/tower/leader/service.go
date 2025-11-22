@@ -18,6 +18,18 @@ func newService(r repository) service {
 	}
 }
 
+func (s service) AcquireLock(ctx context.Context) error {
+	return s.repository.AcquireLock(ctx)
+}
+
+func (s service) ReleaseLock(ctx context.Context) error {
+	return s.repository.ReleaseLock(ctx)
+}
+
+func (s service) RenewLock(ctx context.Context) error {
+	return s.repository.RenewLock(ctx)
+}
+
 func (s service) MarkTowerAsAlive(ctx context.Context, id types.UUID) (err error) {
 	if _, err := s.repository.GetTowerById(ctx, id); err != nil {
 		return fmt.Errorf("failed to check if tower exists: %w", err)

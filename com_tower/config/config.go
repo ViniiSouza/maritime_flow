@@ -20,17 +20,22 @@ var Configuration *Config
 
 type Config struct {
 	id          types.UUID
-	baseDns     string
 	leaderUuid  types.UUID
+	baseDns     string
 	towersQueue string
 	auditQueue  string
 
 	db       *pgx.Conn
 	rabbitmq *amqp.Channel
 
+	uptime time.Time
+
+	maxLeaderFailures   int
 	propagationInterval time.Duration
 	heartbeatInterval   time.Duration
 	heartbeatTimeout    time.Duration
+	renewLockInterval   time.Duration
+	renewLockTimeout    time.Duration
 }
 
 func (c *Config) GetId() types.UUID {
@@ -69,6 +74,14 @@ func (c *Config) SetLeaderUUID(id types.UUID) {
 	c.leaderUuid = id
 }
 
+func (c *Config) GetUptimeSeconds() float64 {
+	return time.Since(c.uptime).Seconds()
+}
+
+func (c *Config) GetMaxLeaderFailures() int {
+	return c.maxLeaderFailures
+}
+
 func (c *Config) GetPropagationInterval() time.Duration {
 	return c.propagationInterval
 }
@@ -79,6 +92,18 @@ func (c *Config) GetHeartbeatInterval() time.Duration {
 
 func (c *Config) GetHeartbeatTimeout() time.Duration {
 	return c.heartbeatTimeout
+}
+
+func (c *Config) GetRenewLockInterval() time.Duration {
+	return c.renewLockInterval
+}
+
+func (c *Config) GetRenewLockTimeout() time.Duration {
+	return c.renewLockTimeout
+}
+
+func (c *Config) IsLeader() bool {
+	return c.leaderUuid == c.id
 }
 
 func InitConfig(ctx context.Context) {
@@ -98,6 +123,11 @@ func InitConfig(ctx context.Context) {
 
 	dns := os.Getenv(utils.BaseDnsEnv)
 
+	maxLeaderFailures, err := strconv.Atoi(os.Getenv(utils.MaxLeaderFailuresEnv))
+	if err != nil {
+		log.Fatalf("failed to parse max leader failures env: %v", err)
+	}
+
 	pinterval, err := strconv.Atoi(os.Getenv(utils.PropagationIntervalEnv))
 	if err != nil {
 		log.Fatalf("failed to parse propagation interval env: %v", err)
@@ -112,12 +142,27 @@ func InitConfig(ctx context.Context) {
 
 	heartbeatInterval := time.Duration(hinterval) * time.Second
 
-	timeout, err := strconv.Atoi(os.Getenv(utils.HeartbeatTimeoutEnv))
+	htimeout, err := strconv.Atoi(os.Getenv(utils.HeartbeatTimeoutEnv))
 	if err != nil {
 		log.Fatalf("failed to parse heartbeat timeout env: %v", err)
 	}
 
-	heartbeatTimeout := time.Duration(timeout) * time.Second
+	heartbeatTimeout := time.Duration(htimeout) * time.Second
+
+	linterval, err := strconv.Atoi(os.Getenv(utils.RenewLockIntervalEnv))
+	if err != nil {
+		log.Fatalf("failed to parse renew lock interval env: %v", err)
+	}
+
+	renewLockInterval := time.Duration(linterval) * time.Second
+
+	ltimeout, err := strconv.Atoi(os.Getenv(utils.RenewLockTimeoutEnv))
+	if err != nil {
+		log.Fatalf("failed to parse renew lock timeout env: %v", err)
+	}
+
+	renewLockTimeout := time.Duration(ltimeout) * time.Second
+
 	Configuration = &Config{
 		id:                  types.UUID(id),
 		baseDns:             dns,
@@ -125,9 +170,13 @@ func InitConfig(ctx context.Context) {
 		auditQueue:          auditQueue,
 		db:                  conn,
 		rabbitmq:            channel,
+		uptime:              time.Now(),
+		maxLeaderFailures:   maxLeaderFailures,
 		propagationInterval: propagationInterval,
 		heartbeatInterval:   heartbeatInterval,
 		heartbeatTimeout:    heartbeatTimeout,
+		renewLockInterval:   renewLockInterval,
+		renewLockTimeout:    renewLockTimeout,
 	}
 }
 

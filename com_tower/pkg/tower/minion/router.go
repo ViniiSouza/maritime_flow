@@ -4,10 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupRouter() (router *gin.Engine) {
-	repo := newRepository()
-	integ := newIntegration()
-	svc := newService(integ, repo)
+func setupRouter(svc service) (router *gin.Engine) {
 	handler := newHandler(svc)
 
 	router = gin.Default()
@@ -17,6 +14,8 @@ func setupRouter() (router *gin.Engine) {
 	router.POST("/towers", handler.SyncTowers)
 	router.POST("/structures", handler.SyncStructures)
 	router.POST("/slots", handler.CheckSlotAvailability)
+	router.POST("/election", handler.HandleElection)
+	router.POST("/leader", handler.SetNewLeader)
 
 	return
 }

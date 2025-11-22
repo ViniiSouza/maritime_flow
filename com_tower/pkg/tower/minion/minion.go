@@ -2,6 +2,7 @@ package minion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,68 +10,98 @@ import (
 	"time"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/leaderelection"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
-func InitMinion(ctx context.Context) {
-	go serve()
-	go healthcheck(ctx)
-	go consumeBroker(ctx)
-}
+func InitMinion(ctx context.Context) func() {
+	minionCtx, minionCancel := context.WithCancel(ctx)
 
-func serve() {
+	integ := newIntegration()
+	repo := newRepository()
+	svc := newService(integ, repo)
+
 	if err := bindAuditQueue(); err != nil {
 		log.Fatalf("[minion][audit] failed to bind audit queue: %v", err)
 	}
-
+	
 	server := &http.Server{
-		Handler:        setupRouter(),
+		Handler:        setupRouter(svc),
 		Addr:           fmt.Sprintf(":%s", os.Getenv(utils.PortEnv)),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	if err := server.ListenAndServe(); err != nil {
+	go serve(server)
+	go healthcheck(minionCtx, svc)
+	go consumeBroker(minionCtx, svc)
+
+	return func() {
+		minionCancel()
+
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("[minion] HTTP Server forced shutdown: %v", err)
+		} else {
+			log.Println("[minion] HTTP Server stopped")
+		}
+	}
+}
+
+func serve(server *http.Server) {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		panic(err)
 	}
 }
 
-func healthcheck(ctx context.Context) {
-	integ := newIntegration()
-	repo := newRepository()
-	svc := newService(integ, repo)
+func healthcheck(ctx context.Context, svc service) {
+	maxLeaderFailures := config.Configuration.GetMaxLeaderFailures()
+	failureCount := 0
 
 	for {
-		if err := svc.SendHealthCheck(ctx); err != nil {
-			log.Printf("[minion][healthcheck] failed to send healthcheck: %v", err)
-		}
+		select {
+		case <-time.After(config.Configuration.GetHeartbeatInterval()):
+			if err := svc.SendHealthCheck(ctx); err != nil {
+				log.Printf("[minion][healthcheck] failed to send healthcheck: %v", err)
 
-		time.Sleep(config.Configuration.GetHeartbeatInterval())
+				if errors.Is(err, utils.ErrLeaderUnreachable) {
+					failureCount++
+
+					if failureCount == maxLeaderFailures {
+						go leaderelection.StartElection(svc.ListTowers())
+						failureCount = 0
+						time.Sleep(5 * time.Second)
+					}
+				}
+			} else {
+				failureCount = 0
+			}
+
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
-func consumeBroker(ctx context.Context) {
-	integ := newIntegration()
-	repo := newRepository()
-	svc := newService(integ, repo)
-
+func consumeBroker(ctx context.Context, svc service) {
 	slotReleaseCh, err := bindTowersQueue()
 	if err != nil {
 		log.Fatalf("[minion][consumer] failed to bind towers queue: %v", err)
 	}
 
-main_loop:
 	for {
 		select {
 		case msg := <-slotReleaseCh:
-			log.Printf("received message: %s", string(msg.Body))
+			log.Printf("[minion][consumer] received message: %s", string(msg.Body))
 			svc.ReleaseSlot(ctx, msg.Body)
 
 		case <-ctx.Done():
-			log.Printf("interrupting...")
+			log.Printf("[minion][consumer] interrupting consumer...")
 			config.CloseRabbitMQ()
-			break main_loop
+			return
 		}
 	}
 }

@@ -8,6 +8,7 @@ type ErrorResponse struct {
 }
 
 var (
-	ErrInvalidInput = errors.New("invalid request body")
-	ErrInvalidUUID  = errors.New("invalid or bad formated uuid")
+	ErrInvalidInput      = errors.New("invalid request body")
+	ErrInvalidUUID       = errors.New("invalid or bad formated uuid")
+	ErrLeaderUnreachable = errors.New("failed to communicate with leader")
 )

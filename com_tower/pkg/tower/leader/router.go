@@ -4,9 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupRouter() (router *gin.Engine) {
-	repo := newRepository()
-	svc := newService(repo)
+func setupRouter(svc service) (router *gin.Engine) {
 	handler := newHandler(svc)
 
 	router = gin.Default()

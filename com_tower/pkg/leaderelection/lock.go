@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	AcquireLockQuery = "UPDATE tower_lock SET leader_id = $1 WHERE leader_id IS NULL;"
+	AcquireLockQuery = "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id IS NULL;"
 	GetLeaderQuery   = "SELECT leader_id FROM tower_lock LIMIT 1;"
 )
 
-func TryAcquireLockAndReturnLeaderUUID(ctx context.Context) types.UUID {
+func AcquireLockIfEmptyAndReturnLeaderUUID(ctx context.Context) types.UUID {
 	tag, err := config.Configuration.GetDBConn().Exec(ctx, AcquireLockQuery, config.Configuration.GetId())
 	if err != nil {
 		log.Fatalf("failed to ensure leader lock: %v", err)
