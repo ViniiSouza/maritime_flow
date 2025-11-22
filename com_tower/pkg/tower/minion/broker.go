@@ -35,3 +35,39 @@ func bindTowersQueue() (<-chan amqp.Delivery, error) {
 
 	return msgs, nil
 }
+
+func bindAuditQueue() (*amqp.Queue, error) {
+	if err := config.Configuration.GetRabbitMQChannel().ExchangeDeclare(
+		"requests",
+		amqp.ExchangeDirect,
+		false,
+		false,
+		false,
+		false,
+		nil,
+	); err != nil {
+		return nil, fmt.Errorf("failed to declare exchange \"requests\": %w", err)
+	}
+
+	queue, err := config.Configuration.GetRabbitMQChannel().QueueDeclare(
+		config.Configuration.GetAuditQueue(),
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to declare queue \"%s\": %w", config.Configuration.GetAuditQueue(), err)
+	}
+
+	config.Configuration.GetRabbitMQChannel().QueueBind(
+		queue.Name,
+		"requests",
+		"requests",
+		false,
+		nil,
+	)
+
+	return &queue, nil
+}

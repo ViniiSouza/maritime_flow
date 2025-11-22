@@ -7,6 +7,7 @@ const (
 	PostgresURIEnv         = "POSTGRES_URI"
 	RabbitMQURIEnv         = "RABBITMQ_URI"
 	TowersQueueEnv         = "TOWERS_QUEUE"
+	AuditQueueEnv          = "AUDIT_QUEUE"
 	PropagationIntervalEnv = "PROPAGATION_INTERVAL"
 	HeartbeatIntervalEnv   = "HEARTBEAT_INTERVAL"
 	HeartbeatTimeoutEnv    = "HEARTBEAT_TIMEOUT"

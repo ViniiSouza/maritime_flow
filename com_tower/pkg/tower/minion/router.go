@@ -11,6 +11,7 @@ func setupRouter() (router *gin.Engine) {
 	handler := newHandler(svc)
 
 	router = gin.Default()
+	router.Use(AuditRequests())
 	router.GET("/towers", handler.ListTowers)
 	router.GET("/structures", handler.ListStructures)
 	router.POST("/towers", handler.SyncTowers)

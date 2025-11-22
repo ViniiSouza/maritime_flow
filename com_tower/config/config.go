@@ -23,6 +23,7 @@ type Config struct {
 	baseDns     string
 	leaderUuid  types.UUID
 	towersQueue string
+	auditQueue  string
 
 	db       *pgx.Conn
 	rabbitmq *amqp.Channel
@@ -50,6 +51,10 @@ func (c *Config) GetRabbitMQChannel() *amqp.Channel {
 
 func (c *Config) GetTowersQueue() string {
 	return c.towersQueue
+}
+
+func (c *Config) GetAuditQueue() string {
+	return c.auditQueue
 }
 
 func (c *Config) GetBaseDns() string {
@@ -89,6 +94,7 @@ func InitConfig(ctx context.Context) {
 
 	channel := initRabbitMQ()
 	towersQueue := os.Getenv(utils.TowersQueueEnv)
+	auditQueue := os.Getenv(utils.AuditQueueEnv)
 
 	dns := os.Getenv(utils.BaseDnsEnv)
 
@@ -116,6 +122,7 @@ func InitConfig(ctx context.Context) {
 		id:                  types.UUID(id),
 		baseDns:             dns,
 		towersQueue:         towersQueue,
+		auditQueue:          auditQueue,
 		db:                  conn,
 		rabbitmq:            channel,
 		propagationInterval: propagationInterval,
