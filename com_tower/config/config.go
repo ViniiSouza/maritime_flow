@@ -14,12 +14,14 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
+var brokerconn *amqp.Connection
 var Configuration *Config
 
 type Config struct {
-	id         uuid.UUID
-	baseDns    string
-	leaderUuid uuid.UUID
+	id          utils.UUID
+	baseDns     string
+	leaderUuid  utils.UUID
+	towersQueue string
 
 	db       *pgx.Conn
 	rabbitmq *amqp.Channel
@@ -29,7 +31,7 @@ type Config struct {
 	heartbeatTimeout    time.Duration
 }
 
-func (c *Config) GetId() uuid.UUID {
+func (c *Config) GetId() utils.UUID {
 	return c.id
 }
 
@@ -45,15 +47,19 @@ func (c *Config) GetRabbitMQChannel() *amqp.Channel {
 	return c.rabbitmq
 }
 
+func (c *Config) GetTowersQueue() string {
+	return c.towersQueue
+}
+
 func (c *Config) GetBaseDns() string {
 	return c.baseDns
 }
 
-func (c *Config) GetLeaderUUID() uuid.UUID {
+func (c *Config) GetLeaderUUID() utils.UUID {
 	return c.leaderUuid
 }
 
-func (c *Config) SetLeaderUUID(id uuid.UUID) {
+func (c *Config) SetLeaderUUID(id utils.UUID) {
 	c.leaderUuid = id
 }
 
@@ -81,6 +87,7 @@ func InitConfig(ctx context.Context) {
 	}
 
 	channel := initRabbitMQ()
+	towersQueue := os.Getenv(utils.TowersQueueEnv)
 
 	dns := os.Getenv(utils.BaseDnsEnv)
 
@@ -105,10 +112,11 @@ func InitConfig(ctx context.Context) {
 
 	heartbeatTimeout := time.Duration(timeout) * time.Second
 	Configuration = &Config{
-		id:                  id,
+		id:                  utils.UUID(id),
+		baseDns:             dns,
+		towersQueue:         towersQueue,
 		db:                  conn,
 		rabbitmq:            channel,
-		baseDns:             dns,
 		propagationInterval: propagationInterval,
 		heartbeatInterval:   heartbeatInterval,
 		heartbeatTimeout:    heartbeatTimeout,
@@ -116,15 +124,21 @@ func InitConfig(ctx context.Context) {
 }
 
 func initRabbitMQ() *amqp.Channel {
-	conn, err := amqp.Dial(os.Getenv(utils.RabbitMQURIEnv))
+	var err error
+	brokerconn, err = amqp.Dial(os.Getenv(utils.RabbitMQURIEnv))
 	if err != nil {
 		log.Fatalf("failed to connect to rabbitmq: %v", err)
 	}
 
-	ch, err := conn.Channel()
+	ch, err := brokerconn.Channel()
 	if err != nil {
 		log.Fatalf("failed to open a channel: %v", err)
 	}
 
 	return ch
+}
+
+func CloseRabbitMQ() {
+	Configuration.GetRabbitMQChannel().Close()
+	brokerconn.Close()
 }

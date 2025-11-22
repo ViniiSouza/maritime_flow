@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/leaderelection"
@@ -24,13 +23,9 @@ func main() {
 	} 
 
 	if isLeader {
-		if err := leader.InitLeader(ctx); err != nil {
-			log.Fatalf("failed to initialize leader tower: %v", err)
-		}
+		leader.InitLeader(ctx)
 	} else {
-		if err := minion.InitMinion(ctx); err != nil {
-			log.Fatalf("failed to initialize minion tower: %v", err)
-		}
+		minion.InitMinion(ctx)
 	}
 
 	<-ctx.Done()

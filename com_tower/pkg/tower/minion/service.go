@@ -2,6 +2,7 @@ package minion
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
@@ -44,8 +45,8 @@ func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotReq
 
 	if result.State == slot.FreeSlotState {
 		acquireRequest := slot.AcquireSlotRequest{
-			VehicleUuid:          request.VehicleUuid,
-			StructureUuid:        request.StructureUuid,
+			VehicleUUID:          request.VehicleUUID,
+			StructureUUID:        request.StructureUUID,
 			StructureSlotRequest: request.StructureSlotRequest,
 		}
 
@@ -66,4 +67,15 @@ func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotReq
 
 func (s service) SendHealthCheck(ctx context.Context) error {
 	return s.integration.SendHealthCheck(ctx)
+}
+
+func (s service) ReleaseSlot(ctx context.Context, msg []byte) error {
+
+	if err := s.integration.ReleaseSlot(ctx); err != nil {
+		return fmt.Errorf("failed to release slot in structure: %v", err)
+	}
+
+	if err := s.integration.ReleaseSlotLock(ctx); err != nil {
+		return fmt.Errorf("failed to release slot lock in tower leader: %v", err)
+	}
 }

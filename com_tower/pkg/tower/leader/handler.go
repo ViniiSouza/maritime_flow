@@ -8,7 +8,6 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type handler struct {
@@ -28,13 +27,7 @@ func (h handler) MarkTowerAsAlive(ctx *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(request.Id)
-	if err != nil {
-		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidUUID)
-		return
-	}
-
-	if err := h.service.MarkTowerAsAlive(ctx, id); err != nil {
+	if err := h.service.MarkTowerAsAlive(ctx, request.Id); err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}

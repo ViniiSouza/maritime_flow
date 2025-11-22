@@ -12,11 +12,10 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
-func InitMinion(ctx context.Context) error {
+func InitMinion(ctx context.Context) {
 	go serve()
 	go healthcheck(ctx)
-
-	return nil
+	go consumeBroker(ctx)
 }
 
 func serve() {
@@ -44,5 +43,30 @@ func healthcheck(ctx context.Context) {
 		}
 
 		time.Sleep(config.Configuration.GetHeartbeatInterval())
+	}
+}
+
+func consumeBroker(ctx context.Context) {
+	integ := newIntegration()
+	repo := newRepository()
+	svc := newService(integ, repo)
+
+	slotReleaseCh, err := bindTowersQueue()
+	if err != nil {
+		log.Fatalf("[minion][consumer] failed to bind towers queue: %v", err)
+	}
+
+main_loop:
+	for {
+		select {
+		case msg := <-slotReleaseCh:
+			log.Printf("received message: %s", string(msg.Body))
+			svc.ReleaseSlot(ctx, msg.Body)
+
+		case <-ctx.Done():
+			log.Printf("interrupting...")
+			config.CloseRabbitMQ()
+			break main_loop
+		}
 	}
 }

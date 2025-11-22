@@ -8,7 +8,7 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
-	"github.com/google/uuid"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -22,7 +22,7 @@ func newRepository() repository {
 	}
 }
 
-func (r repository) GetTowerById(ctx context.Context, id uuid.UUID) (tower.Tower, error) {
+func (r repository) GetTowerById(ctx context.Context, id utils.UUID) (tower.Tower, error) {
 	rows, err := r.DB.Query(ctx, "SELECT id FROM towers WHERE id == $1;", id.String())
 	if err != nil {
 		return tower.Tower{}, err
@@ -31,7 +31,7 @@ func (r repository) GetTowerById(ctx context.Context, id uuid.UUID) (tower.Tower
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByNameLax[tower.Tower])
 }
 
-func (r repository) UpdateTowerLastSeen(ctx context.Context, id uuid.UUID) (err error) {
+func (r repository) UpdateTowerLastSeen(ctx context.Context, id utils.UUID) (err error) {
 	_, err = r.DB.Exec(ctx, "UPDATE towers SET last_seen = NOW() WHERE id == $1;", id.String())
 	return
 }
@@ -63,17 +63,17 @@ func (r repository) ListCentrals(ctx context.Context) ([]structure.Central, erro
 	return pgx.CollectRows(rows, pgx.RowToStructByName[structure.Central])
 }
 
-func (r repository) GetSlotUUID(ctx context.Context, data slot.AcquireSlotRequest) (slotUuid uuid.UUID, err error) {
-	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3;", data.StructureUuid, data.SlotType, data.SlotNumber).Scan(&slotUuid)
+func (r repository) GetSlotUUID(ctx context.Context, data slot.AcquireSlotRequest) (slotUuid utils.UUID, err error) {
+	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3;", data.StructureUUID, data.SlotType, data.SlotNumber).Scan(&slotUuid)
 	return
 }
 
-func (r repository) CheckSlotAvailability(ctx context.Context, slotUuid uuid.UUID) (isAvailable bool, err error) {
+func (r repository) CheckSlotAvailability(ctx context.Context, slotUuid utils.UUID) (isAvailable bool, err error) {
 	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1);", slotUuid).Scan(&isAvailable)
 	return
 }
 
-func (r repository) AcquireSlot(ctx context.Context, vehicleUuid string, slotUuid uuid.UUID) error {
+func (r repository) AcquireSlot(ctx context.Context, vehicleUuid utils.UUID, slotUuid utils.UUID) error {
 	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = $1 WHERE id = $2;", slotUuid, vehicleUuid)
 	if err != nil {
 		return err

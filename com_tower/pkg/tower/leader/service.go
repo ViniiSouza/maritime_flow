@@ -8,7 +8,7 @@ import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
-	"github.com/google/uuid"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
 type service struct {
@@ -21,7 +21,7 @@ func newService(r repository) service {
 	}
 }
 
-func (s service) MarkTowerAsAlive(ctx context.Context, id uuid.UUID) (err error) {
+func (s service) MarkTowerAsAlive(ctx context.Context, id utils.UUID) (err error) {
 	if _, err := s.repository.GetTowerById(ctx, id); err != nil {
 		return fmt.Errorf("failed to check if tower exists: %w", err)
 	}
@@ -76,7 +76,7 @@ func (s service) AcquireSlot(ctx context.Context, request slot.AcquireSlotReques
 		}, nil
 	}
 
-	if err := s.repository.AcquireSlot(ctx, request.VehicleUuid, slotUuid); err != nil {
+	if err := s.repository.AcquireSlot(ctx, request.VehicleUUID, slotUuid); err != nil {
 		return nil, fmt.Errorf("failed to acquire slot %s: %w", slotUuid, err)
 	}
 

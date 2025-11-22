@@ -20,11 +20,9 @@ var (
 	client = &http.Client{}
 )
 
-func InitLeader(ctx context.Context) error {
+func InitLeader(ctx context.Context) {
 	go serve()
 	go propagate(ctx)
-
-	return nil
 }
 
 func serve() {
@@ -76,16 +74,16 @@ func propagate(ctx context.Context) {
 			}
 
 			for _, tower := range healthyTowers {
-				baseEndpoint := fmt.Sprintf("%s.tower.%s", tower.Uuid.String(), config.Configuration.GetBaseDns())
+				baseEndpoint := fmt.Sprintf("%s.tower.%s", tower.UUID.String(), config.Configuration.GetBaseDns())
 				towersEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.TowersPropagationPath)
 				structuresEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.StructuresPropagationPath)
 
 				if err := doPropagateReq(ctx, towersEndpoint, towersPayload); err != nil {
-					log.Printf("[leader][propagate] failed to propagate healthy towers to tower %s: %v", tower.Uuid.String(), err)
+					log.Printf("[leader][propagate] failed to propagate healthy towers to tower %s: %v", tower.UUID.String(), err)
 				}
 
 				if err := doPropagateReq(ctx, structuresEndpoint, structuresPayload); err != nil {
-					log.Printf("[leader][propagate] failed to propagate structures to tower %s: %v", tower.Uuid.String(), err)
+					log.Printf("[leader][propagate] failed to propagate structures to tower %s: %v", tower.UUID.String(), err)
 				}
 			}
 		}

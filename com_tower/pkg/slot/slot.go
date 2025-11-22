@@ -1,10 +1,13 @@
 package slot
 
-import "github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
+import (
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/vehicle"
+)
 
 type SlotType string
 type SlotState string
-type VehicleType string
 type AcquireSlotResultType string
 
 const (
@@ -15,10 +18,6 @@ const (
 	// slot states
 	FreeSlotState  SlotState = "free"
 	InUseSlotState SlotState = "in_use"
-
-	// vehicle types
-	ShipVehicleType       VehicleType = "ship"
-	HelicopterVehicleType VehicleType = "helicopter"
 
 	// acquire slot result types
 	AcquiredAcquireSlotResultType    AcquireSlotResultType = "acquired"
@@ -31,9 +30,9 @@ type StructureSlotRequest struct {
 }
 
 type SlotRequest struct {
-	VehicleUuid   string                  `json:"vehicle_uuid"`
-	VehicleType   VehicleType             `json:"vehicle_type"`
-	StructureUuid string                  `json:"structure_uuid"`
+	VehicleUUID   utils.UUID              `json:"vehicle_uuid"`
+	VehicleType   vehicle.VehicleType     `json:"vehicle_type"`
+	StructureUUID utils.UUID              `json:"structure_uuid"`
 	StructureType structure.StructureType `json:"structure_type"`
 	StructureSlotRequest
 }
@@ -43,11 +42,15 @@ type SlotResponse struct {
 }
 
 type AcquireSlotRequest struct {
-	VehicleUuid   string `json:"vehicle_uuid"`
-	StructureUuid string `json:"structure_uuid"`
+	VehicleUUID   utils.UUID `json:"vehicle_uuid"`
+	StructureUUID utils.UUID `json:"structure_uuid"`
 	StructureSlotRequest
 }
 
 type AcquireSlotResponse struct {
 	Result AcquireSlotResultType
 }
+
+type ReleaseSlotRequest StructureSlotRequest
+
+type ReleaseSlotLockRequest AcquireSlotRequest
