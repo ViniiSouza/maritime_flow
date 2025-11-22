@@ -2,10 +2,10 @@ package minion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 )
 
@@ -25,7 +25,7 @@ func (s service) ListTowers() []tower.Tower {
 	return s.repository.ListTowers()
 }
 
-func (s service) ListStructures() structure.Structures {
+func (s service) ListStructures() types.Structures {
 	return s.repository.ListStructures()
 }
 
@@ -33,18 +33,18 @@ func (s service) SyncTowers(towers tower.TowersPayload) {
 	s.repository.SyncTowers(towers)
 }
 
-func (s service) SyncStructures(structures structure.Structures) {
+func (s service) SyncStructures(structures types.Structures) {
 	s.repository.SyncStructures(structures)
 }
 
-func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotRequest) (*slot.SlotResponse, error) {
+func (s service) CheckSlotAvailability(ctx context.Context, request types.SlotRequest) (*types.SlotResponse, error) {
 	result, err := s.integration.RequestSlotToStructure(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	if result.State == slot.FreeSlotState {
-		acquireRequest := slot.AcquireSlotRequest{
+	if result.State == types.FreeSlotState {
+		acquireRequest := types.AcquireSlotRequest{
 			VehicleUUID:          request.VehicleUUID,
 			StructureUUID:        request.StructureUUID,
 			StructureSlotRequest: request.StructureSlotRequest,
@@ -55,9 +55,9 @@ func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotReq
 			return nil, err
 		}
 
-		if acquireResult.Result == slot.UnavailableAcquireSlotResultType {
-			return &slot.SlotResponse{
-				State: slot.InUseSlotState,
+		if acquireResult.Result == types.UnavailableAcquireSlotResultType {
+			return &types.SlotResponse{
+				State: types.InUseSlotState,
 			}, nil
 		}
 	}
@@ -69,13 +69,33 @@ func (s service) SendHealthCheck(ctx context.Context) error {
 	return s.integration.SendHealthCheck(ctx)
 }
 
-func (s service) ReleaseSlot(ctx context.Context, msg []byte) error {
-
-	if err := s.integration.ReleaseSlot(ctx); err != nil {
-		return fmt.Errorf("failed to release slot in structure: %v", err)
+func (s service) ReleaseSlot(ctx context.Context, data []byte) error {
+	var msg types.VehicleEventMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return fmt.Errorf("failed to unmarshal vehicle message: %w", err)
 	}
 
-	if err := s.integration.ReleaseSlotLock(ctx); err != nil {
-		return fmt.Errorf("failed to release slot lock in tower leader: %v", err)
+	releaseReq := types.ReleaseSlotRequest{
+		SlotNumber: msg.SlotNumber,
+		SlotType: types.GetSlotTypeByVehicleType(msg.VehicleType),
 	}
+
+	if err := s.integration.ReleaseSlot(ctx, msg.StructureUUID, msg.StructureType, releaseReq); err != nil {
+		return fmt.Errorf("failed to release slot in structure: %w", err)
+	}
+
+	releaseLockReq := types.ReleaseSlotLockRequest{
+		VehicleUUID: msg.VehicleUUID,
+		StructureUUID: msg.StructureUUID,
+		StructureSlotRequest: types.StructureSlotRequest{
+			SlotNumber: msg.SlotNumber,
+			SlotType: types.GetSlotTypeByVehicleType(msg.VehicleType),
+		},
+	}
+
+	if err := s.integration.ReleaseSlotLock(ctx, releaseLockReq); err != nil {
+		return fmt.Errorf("failed to release slot lock in tower leader: %w", err)
+	}
+
+	return nil
 }

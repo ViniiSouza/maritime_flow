@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
@@ -42,7 +41,7 @@ func (s service) ListHealthyTowers(ctx context.Context, heartbeatTimeout time.Du
 	return
 }
 
-func (s service) ListStructures(ctx context.Context) (*structure.Structures, error) {
+func (s service) ListStructures(ctx context.Context) (*types.Structures, error) {
 	platforms, err := s.repository.ListPlatforms(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list platforms: %w", err)
@@ -53,13 +52,13 @@ func (s service) ListStructures(ctx context.Context) (*structure.Structures, err
 		return nil, fmt.Errorf("failed to list centrals: %w", err)
 	}
 
-	return &structure.Structures{
+	return &types.Structures{
 		Platforms: platforms,
 		Centrals:  centrals,
 	}, nil
 }
 
-func (s service) AcquireSlot(ctx context.Context, request slot.AcquireSlotRequest) (*slot.AcquireSlotResponse, error) {
+func (s service) AcquireSlot(ctx context.Context, request types.AcquireSlotRequest) (*types.AcquireSlotResponse, error) {
 	slotUuid, err := s.repository.GetSlotUUID(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slot uuid: %w", err)
@@ -71,8 +70,8 @@ func (s service) AcquireSlot(ctx context.Context, request slot.AcquireSlotReques
 	}
 
 	if !isSlotAvailable {
-		return &slot.AcquireSlotResponse{
-			Result: slot.UnavailableAcquireSlotResultType,
+		return &types.AcquireSlotResponse{
+			Result: types.UnavailableAcquireSlotResultType,
 		}, nil
 	}
 
@@ -80,7 +79,7 @@ func (s service) AcquireSlot(ctx context.Context, request slot.AcquireSlotReques
 		return nil, fmt.Errorf("failed to acquire slot %s: %w", slotUuid, err)
 	}
 
-	return &slot.AcquireSlotResponse{
-		Result: slot.AcquiredAcquireSlotResultType,
+	return &types.AcquireSlotResponse{
+		Result: types.AcquiredAcquireSlotResultType,
 	}, nil 
 }

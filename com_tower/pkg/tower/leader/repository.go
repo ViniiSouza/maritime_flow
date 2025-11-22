@@ -5,8 +5,7 @@ import (
 	"errors"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/jackc/pgx/v5"
@@ -45,25 +44,25 @@ func (r repository) ListTowersByLastSeenAt(ctx context.Context, heartbeatTimeout
 	return pgx.CollectRows(rows, pgx.RowToStructByName[tower.Tower])
 }
 
-func (r repository) ListPlatforms(ctx context.Context) ([]structure.Platform, error) {
+func (r repository) ListPlatforms(ctx context.Context) ([]types.Platform, error) {
 	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM platforms;")
 	if err != nil {
 		return nil, err
 	}
 
-	return pgx.CollectRows(rows, pgx.RowToStructByName[structure.Platform])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[types.Platform])
 }
 
-func (r repository) ListCentrals(ctx context.Context) ([]structure.Central, error) {
+func (r repository) ListCentrals(ctx context.Context) ([]types.Central, error) {
 	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM centrals;")
 	if err != nil {
 		return nil, err
 	}
 
-	return pgx.CollectRows(rows, pgx.RowToStructByName[structure.Central])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[types.Central])
 }
 
-func (r repository) GetSlotUUID(ctx context.Context, data slot.AcquireSlotRequest) (slotUuid utils.UUID, err error) {
+func (r repository) GetSlotUUID(ctx context.Context, data types.AcquireSlotRequest) (slotUuid utils.UUID, err error) {
 	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3;", data.StructureUUID, data.SlotType, data.SlotNumber).Scan(&slotUuid)
 	return
 }

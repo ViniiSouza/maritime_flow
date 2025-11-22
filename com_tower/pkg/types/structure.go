@@ -1,4 +1,4 @@
-package structure
+package types
 
 import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"

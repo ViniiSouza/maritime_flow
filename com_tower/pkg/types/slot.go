@@ -1,9 +1,7 @@
-package slot
+package types
 
 import (
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/vehicle"
 )
 
 type SlotType string
@@ -31,9 +29,9 @@ type StructureSlotRequest struct {
 
 type SlotRequest struct {
 	VehicleUUID   utils.UUID              `json:"vehicle_uuid"`
-	VehicleType   vehicle.VehicleType     `json:"vehicle_type"`
+	VehicleType   VehicleType     `json:"vehicle_type"`
 	StructureUUID utils.UUID              `json:"structure_uuid"`
-	StructureType structure.StructureType `json:"structure_type"`
+	StructureType StructureType `json:"structure_type"`
 	StructureSlotRequest
 }
 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/gin-gonic/gin"
@@ -36,7 +36,7 @@ func (h handler) MarkTowerAsAlive(ctx *gin.Context) {
 }
 
 func (h handler) AcquireSlot(ctx *gin.Context) {
-	var request slot.AcquireSlotRequest
+	var request types.AcquireSlotRequest
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidInput)
 		return

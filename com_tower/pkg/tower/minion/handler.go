@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/structure"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/gin-gonic/gin"
@@ -57,7 +56,7 @@ func (h handler) SyncTowers(ctx *gin.Context) {
 }
 
 func (h handler) SyncStructures(ctx *gin.Context) {
-	var structures structure.Structures
+	var structures types.Structures
 	if err := ctx.ShouldBindJSON(structures); err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
@@ -68,7 +67,7 @@ func (h handler) SyncStructures(ctx *gin.Context) {
 }
 
 func (h handler) CheckSlotAvailability(ctx *gin.Context) {
-	var slotRequest slot.SlotRequest
+	var slotRequest types.SlotRequest
 	if err := ctx.ShouldBindJSON(slotRequest); err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
