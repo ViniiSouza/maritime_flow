@@ -1,4 +1,4 @@
-module coletor-metricas
+module github.com/ViniiSouza/maritime_flow/metrics_consumer
 
 go 1.25.4
 
