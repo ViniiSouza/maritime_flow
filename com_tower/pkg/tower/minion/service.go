@@ -63,3 +63,7 @@ func (s service) CheckSlotAvailability(ctx context.Context, request slot.SlotReq
 
 	return result, nil
 }
+
+func (s service) SendHealthCheck(ctx context.Context) error {
+	return s.integration.SendHealthCheck(ctx)
+}

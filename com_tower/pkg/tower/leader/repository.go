@@ -23,7 +23,7 @@ func newRepository() repository {
 }
 
 func (r repository) GetTowerById(ctx context.Context, id uuid.UUID) (tower.Tower, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id FROM towers WHERE id == $1", id.String())
+	rows, err := r.DB.Query(ctx, "SELECT id FROM towers WHERE id == $1;", id.String())
 	if err != nil {
 		return tower.Tower{}, err
 	}
@@ -32,12 +32,12 @@ func (r repository) GetTowerById(ctx context.Context, id uuid.UUID) (tower.Tower
 }
 
 func (r repository) UpdateTowerLastSeen(ctx context.Context, id uuid.UUID) (err error) {
-	_, err = r.DB.Exec(ctx, "UPDATE towers SET last_seen = NOW() WHERE id == $1", id.String())
+	_, err = r.DB.Exec(ctx, "UPDATE towers SET last_seen = NOW() WHERE id == $1;", id.String())
 	return
 }
 
 func (r repository) ListTowersByLastSeenAt(ctx context.Context, heartbeatTimeout int) ([]tower.Tower, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM towers WHERE last_seen_at >= NOW() - ($1 || ' seconds')::interval);", heartbeatTimeout)
+	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM towers WHERE last_seen_at >= (NOW() - ($1 || ' seconds')::interval);", heartbeatTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (r repository) ListTowersByLastSeenAt(ctx context.Context, heartbeatTimeout
 }
 
 func (r repository) ListPlatforms(ctx context.Context) ([]structure.Platform, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM platforms")
+	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM platforms;")
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (r repository) ListPlatforms(ctx context.Context) ([]structure.Platform, er
 }
 
 func (r repository) ListCentrals(ctx context.Context) ([]structure.Central, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM centrals")
+	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM centrals;")
 	if err != nil {
 		return nil, err
 	}
@@ -64,17 +64,17 @@ func (r repository) ListCentrals(ctx context.Context) ([]structure.Central, erro
 }
 
 func (r repository) GetSlotUUID(ctx context.Context, data slot.AcquireSlotRequest) (slotUuid uuid.UUID, err error) {
-	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3", data.StructureUuid, data.SlotType, data.SlotNumber).Scan(&slotUuid)
+	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3;", data.StructureUuid, data.SlotType, data.SlotNumber).Scan(&slotUuid)
 	return
 }
 
 func (r repository) CheckSlotAvailability(ctx context.Context, slotUuid uuid.UUID) (isAvailable bool, err error) {
-	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1)", slotUuid).Scan(&isAvailable)
+	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1);", slotUuid).Scan(&isAvailable)
 	return
 }
 
 func (r repository) AcquireSlot(ctx context.Context, vehicleUuid string, slotUuid uuid.UUID) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = $1 WHERE id = $2", slotUuid, vehicleUuid)
+	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = $1 WHERE id = $2;", slotUuid, vehicleUuid)
 	if err != nil {
 		return err
 	}

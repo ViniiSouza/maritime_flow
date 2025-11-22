@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/slot"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 )
 
 type integration struct {
@@ -73,4 +75,30 @@ func (i integration) AcquireSlotLockInTowerLeader(ctx context.Context, slotReque
 	}
 
 	return &acquireResp, nil
+}
+
+func (i integration) SendHealthCheck(ctx context.Context) error {
+	url := fmt.Sprintf("%s.tower.%s/tower-health", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
+	payload, err := json.Marshal(tower.TowerHealthRequest{Id: config.Configuration.GetIdAsString()})
+	if err != nil {
+		return fmt.Errorf("failed to marshal healthcheck request for tower %s: %w", config.Configuration.GetIdAsString(), err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create healthcheck request for tower %s: %w", config.Configuration.GetIdAsString(), err)
+	}
+
+	resp, err := i.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute healthcheck request for tower %s: %w", config.Configuration.GetIdAsString(), err)
+	}
+
+	defer resp.Body.Close()
+
+	if _, err = io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return nil
 }
