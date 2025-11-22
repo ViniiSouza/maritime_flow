@@ -19,6 +19,10 @@ func InitMinion(ctx context.Context) {
 }
 
 func serve() {
+	if err := bindAuditQueue(); err != nil {
+		log.Fatalf("[minion][audit] failed to bind audit queue: %v", err)
+	}
+
 	server := &http.Server{
 		Handler:        setupRouter(),
 		Addr:           fmt.Sprintf(":%s", os.Getenv(utils.PortEnv)),
