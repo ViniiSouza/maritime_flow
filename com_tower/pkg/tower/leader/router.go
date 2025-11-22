@@ -12,6 +12,7 @@ func setupRouter() (router *gin.Engine) {
 	router = gin.Default()
 	router.POST("tower-health", handler.MarkTowerAsAlive)
 	router.POST("acquire-slot", handler.AcquireSlot)
+	router.POST("release-slot", handler.ReleaseSlot)
 
 	return
 }

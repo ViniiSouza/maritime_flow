@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	amqp "github.com/rabbitmq/amqp091-go"
 
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
@@ -18,9 +19,9 @@ var brokerconn *amqp.Connection
 var Configuration *Config
 
 type Config struct {
-	id          utils.UUID
+	id          types.UUID
 	baseDns     string
-	leaderUuid  utils.UUID
+	leaderUuid  types.UUID
 	towersQueue string
 
 	db       *pgx.Conn
@@ -31,7 +32,7 @@ type Config struct {
 	heartbeatTimeout    time.Duration
 }
 
-func (c *Config) GetId() utils.UUID {
+func (c *Config) GetId() types.UUID {
 	return c.id
 }
 
@@ -55,11 +56,11 @@ func (c *Config) GetBaseDns() string {
 	return c.baseDns
 }
 
-func (c *Config) GetLeaderUUID() utils.UUID {
+func (c *Config) GetLeaderUUID() types.UUID {
 	return c.leaderUuid
 }
 
-func (c *Config) SetLeaderUUID(id utils.UUID) {
+func (c *Config) SetLeaderUUID(id types.UUID) {
 	c.leaderUuid = id
 }
 
@@ -112,7 +113,7 @@ func InitConfig(ctx context.Context) {
 
 	heartbeatTimeout := time.Duration(timeout) * time.Second
 	Configuration = &Config{
-		id:                  utils.UUID(id),
+		id:                  types.UUID(id),
 		baseDns:             dns,
 		towersQueue:         towersQueue,
 		db:                  conn,

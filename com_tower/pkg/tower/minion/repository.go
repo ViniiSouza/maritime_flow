@@ -2,22 +2,21 @@ package minion
 
 import (
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 )
 
 type repository struct {
-	towers []tower.Tower
+	towers []types.Tower
 	structures types.Structures
 }
 
 func newRepository() *repository {
 	return &repository{
-		towers: []tower.Tower{},
+		towers: []types.Tower{},
 		structures: types.Structures{},
 	}
 }
 
-func (r *repository) ListTowers() []tower.Tower {
+func (r *repository) ListTowers() []types.Tower {
 	return r.towers
 }
 
@@ -25,7 +24,7 @@ func (r *repository) ListStructures() types.Structures {
 	return r.structures
 }
 
-func (r *repository) SyncTowers(towers tower.TowersPayload) {
+func (r *repository) SyncTowers(towers types.TowersPayload) {
 	r.towers = towers.Towers
 }
 

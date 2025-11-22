@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +22,7 @@ func newHandler(service service) handler {
 func (h handler) ListTowers(ctx *gin.Context) {
 	towers := h.service.ListTowers()
 
-	response, err := json.Marshal(tower.TowersPayload{Towers: towers})
+	response, err := json.Marshal(types.TowersPayload{Towers: towers})
 	if err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
@@ -45,7 +44,7 @@ func (h handler) ListStructures(ctx *gin.Context) {
 }
 
 func (h handler) SyncTowers(ctx *gin.Context) {
-	var towers tower.TowersPayload
+	var towers types.TowersPayload
 	if err := ctx.ShouldBindJSON(towers); err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return

@@ -2,8 +2,6 @@ package types
 
 import (
 	"time"
-
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
 type VehicleType string
@@ -35,11 +33,11 @@ const (
 
 type VehicleEventMessage struct {
 	VehicleType   VehicleType             `json:"vehicle_type"`
-	VehicleUUID   utils.UUID              `json:"vehicle_uuid"`
+	VehicleUUID   UUID              `json:"vehicle_uuid"`
 	StructureType StructureType `json:"structure_type"`
-	StructureUUID utils.UUID              `json:"structure_uuid"`
+	StructureUUID UUID              `json:"structure_uuid"`
 	Timestamp     time.Time               `json:"timestamp"`
 	Event         EventType               `json:"event"`
 	SlotNumber    int                     `json:"slot_number"`
-	TowerUUID     utils.UUID              `json:"tower_id"`
+	TowerUUID     UUID              `json:"tower_id"`
 }

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 )
 
 var (
@@ -55,7 +55,7 @@ func propagate(ctx context.Context) {
 				break
 			}
 
-			towersPayload, err := json.Marshal(tower.TowersPayload{Towers: healthyTowers})
+			towersPayload, err := json.Marshal(types.TowersPayload{Towers: healthyTowers})
 			if err != nil {
 				log.Printf("[leader][propagate] failed to marshal healthy towers payload: %v", err)
 				break

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +20,7 @@ func newHandler(service service) handler {
 }
 
 func (h handler) MarkTowerAsAlive(ctx *gin.Context) {
-	var request tower.TowerHealthRequest
+	var request types.TowerHealthRequest
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidInput)
 		return
@@ -55,4 +54,19 @@ func (h handler) AcquireSlot(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, response)
+}
+
+func (h handler) ReleaseSlot(ctx *gin.Context) {
+	var request types.ReleaseSlotLockRequest
+	if err := ctx.ShouldBindJSON(request); err != nil {
+		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidInput)
+		return
+	}
+
+	if err := h.service.ReleaseSlot(ctx, request); err != nil {
+		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }

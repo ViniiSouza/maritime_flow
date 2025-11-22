@@ -1,9 +1,5 @@
 package types
 
-import (
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
-)
-
 type StructureType string
 
 const (
@@ -24,12 +20,12 @@ type Structure struct {
 
 type Platform struct {
 	Structure
-	UUID utils.UUID `json:"platform_uuid" db:"id"`
+	UUID UUID `json:"platform_uuid" db:"id"`
 }
 
 type Central struct {
 	Structure
-	UUID utils.UUID `json:"central_uuid" db:"id"`
+	UUID UUID `json:"central_uuid" db:"id"`
 }
 
 type Structures struct {

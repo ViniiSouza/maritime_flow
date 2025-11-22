@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 )
 
 const (
@@ -13,14 +13,14 @@ const (
 	GetLeaderQuery   = "SELECT leader_id FROM tower_lock LIMIT 1;"
 )
 
-func TryAcquireLockAndReturnLeaderUUID(ctx context.Context) utils.UUID {
+func TryAcquireLockAndReturnLeaderUUID(ctx context.Context) types.UUID {
 	tag, err := config.Configuration.GetDBConn().Exec(ctx, AcquireLockQuery, config.Configuration.GetId())
 	if err != nil {
 		log.Fatalf("failed to ensure leader lock: %v", err)
 	}
 
 	if tag.RowsAffected() == 0 {
-		var id utils.UUID
+		var id types.UUID
 		if err := config.Configuration.GetDBConn().QueryRow(ctx, GetLeaderQuery).Scan(&id); err != nil {
 			log.Fatalf("failed to query leader uuid: %v", err)
 		}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
 )
 
 type service struct {
@@ -21,7 +20,7 @@ func newService(i integration, r *repository) service {
 	}
 }
 
-func (s service) ListTowers() []tower.Tower {
+func (s service) ListTowers() []types.Tower {
 	return s.repository.ListTowers()
 }
 
@@ -29,7 +28,7 @@ func (s service) ListStructures() types.Structures {
 	return s.repository.ListStructures()
 }
 
-func (s service) SyncTowers(towers tower.TowersPayload) {
+func (s service) SyncTowers(towers types.TowersPayload) {
 	s.repository.SyncTowers(towers)
 }
 

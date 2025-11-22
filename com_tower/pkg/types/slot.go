@@ -1,9 +1,5 @@
 package types
 
-import (
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
-)
-
 type SlotType string
 type SlotState string
 type AcquireSlotResultType string
@@ -28,9 +24,9 @@ type StructureSlotRequest struct {
 }
 
 type SlotRequest struct {
-	VehicleUUID   utils.UUID              `json:"vehicle_uuid"`
+	VehicleUUID   UUID              `json:"vehicle_uuid"`
 	VehicleType   VehicleType     `json:"vehicle_type"`
-	StructureUUID utils.UUID              `json:"structure_uuid"`
+	StructureUUID UUID              `json:"structure_uuid"`
 	StructureType StructureType `json:"structure_type"`
 	StructureSlotRequest
 }
@@ -40,8 +36,8 @@ type SlotResponse struct {
 }
 
 type AcquireSlotRequest struct {
-	VehicleUUID   utils.UUID `json:"vehicle_uuid"`
-	StructureUUID utils.UUID `json:"structure_uuid"`
+	VehicleUUID   UUID `json:"vehicle_uuid"`
+	StructureUUID UUID `json:"structure_uuid"`
 	StructureSlotRequest
 }
 

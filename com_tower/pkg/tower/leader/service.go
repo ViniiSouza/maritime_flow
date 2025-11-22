@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
 type service struct {
@@ -20,7 +18,7 @@ func newService(r repository) service {
 	}
 }
 
-func (s service) MarkTowerAsAlive(ctx context.Context, id utils.UUID) (err error) {
+func (s service) MarkTowerAsAlive(ctx context.Context, id types.UUID) (err error) {
 	if _, err := s.repository.GetTowerById(ctx, id); err != nil {
 		return fmt.Errorf("failed to check if tower exists: %w", err)
 	}
@@ -32,7 +30,7 @@ func (s service) MarkTowerAsAlive(ctx context.Context, id utils.UUID) (err error
 	return
 }
 
-func (s service) ListHealthyTowers(ctx context.Context, heartbeatTimeout time.Duration) (towers []tower.Tower, err error) {
+func (s service) ListHealthyTowers(ctx context.Context, heartbeatTimeout time.Duration) (towers []types.Tower, err error) {
 	towers, err = s.repository.ListTowersByLastSeenAt(ctx, int(heartbeatTimeout.Seconds()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list towers: %w", err)
@@ -59,7 +57,7 @@ func (s service) ListStructures(ctx context.Context) (*types.Structures, error) 
 }
 
 func (s service) AcquireSlot(ctx context.Context, request types.AcquireSlotRequest) (*types.AcquireSlotResponse, error) {
-	slotUuid, err := s.repository.GetSlotUUID(ctx, request)
+	slotUuid, err := s.repository.GetSlotUUID(ctx, request.StructureUUID, request.SlotType, request.SlotNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slot uuid: %w", err)
 	}
@@ -82,4 +80,17 @@ func (s service) AcquireSlot(ctx context.Context, request types.AcquireSlotReque
 	return &types.AcquireSlotResponse{
 		Result: types.AcquiredAcquireSlotResultType,
 	}, nil 
+}
+
+func (s service) ReleaseSlot(ctx context.Context, request types.ReleaseSlotLockRequest) error {
+	slotUuid, err := s.repository.GetSlotUUID(ctx, request.StructureUUID, request.SlotType, request.SlotNumber)
+	if err != nil {
+		return fmt.Errorf("failed to get slot uuid: %w", err)
+	}
+
+	if err := s.repository.ReleaseSlot(ctx, request.VehicleUUID, slotUuid); err != nil {
+		return fmt.Errorf("failed to acquire slot %s: %w", slotUuid, err)
+	}
+
+	return nil 
 }

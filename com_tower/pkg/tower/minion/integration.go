@@ -10,8 +10,6 @@ import (
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/tower"
-	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
 type integration struct {
@@ -80,7 +78,7 @@ func (i integration) AcquireSlotLockInTowerLeader(ctx context.Context, slotReque
 
 func (i integration) SendHealthCheck(ctx context.Context) error {
 	url := fmt.Sprintf("%s.tower.%s/tower-health", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
-	payload, err := json.Marshal(tower.TowerHealthRequest{Id: config.Configuration.GetId()})
+	payload, err := json.Marshal(types.TowerHealthRequest{Id: config.Configuration.GetId()})
 	if err != nil {
 		return fmt.Errorf("failed to marshal healthcheck request for tower %s: %w", config.Configuration.GetIdAsString(), err)
 	}
@@ -104,7 +102,7 @@ func (i integration) SendHealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (i integration) ReleaseSlot(ctx context.Context, structureUuid utils.UUID, structureType types.StructureType, slotRequest types.ReleaseSlotRequest) error {
+func (i integration) ReleaseSlot(ctx context.Context, structureUuid types.UUID, structureType types.StructureType, slotRequest types.ReleaseSlotRequest) error {
 	url := fmt.Sprintf("%s.%s.%s/release-slot", structureUuid, structureType, config.Configuration.GetBaseDns())
 	payload, err := json.Marshal(slotRequest)
 	if err != nil {
