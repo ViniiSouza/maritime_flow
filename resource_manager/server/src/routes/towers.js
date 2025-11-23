@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import pool from '../db.js';
 
 const router = Router();
@@ -36,11 +37,12 @@ router.post('/', async (req, res, next) => {
     if (!name || latitude === undefined || longitude === undefined) {
       return res.status(400).json({ message: 'name, latitude and longitude are required' });
     }
+    const id = randomUUID();
     const { rows } = await pool.query(
-      `INSERT INTO towers (name, latitude, longitude, is_leader)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO towers (id, name, latitude, longitude, is_leader)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, name, latitude, longitude, is_leader`,
-      [name, latitude, longitude, is_leader]
+      [id, name, latitude, longitude, is_leader]
     );
     res.status(201).json(rows[0]);
   } catch (error) {

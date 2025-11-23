@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './index.css'
@@ -9,40 +9,20 @@ import platformIcon from './assets/poco-de-petroleo.png';
 import centralIcon from './assets/plataforma-de-petroleo.png';
 import towerLeaderIcon from './assets/tower-icon.png';
 
-// MOCK_DATA (sem alterações)
-const MOCK_TOWERS = [
-  { id: 1, name: 'Tower Alpha', latitude: -23.55, longitude: -46.63, is_leader: false },
-  { id: 1, name: 'Tower Alpha', latitude: -23.55, longitude: -46.63, is_leader: false },
-  { id: 1, name: 'Tower Alpha', latitude: -23.55, longitude: -46.63, is_leader: false },
-  { id: 1, name: 'Tower Alpha', latitude: -23.55, longitude: -46.63, is_leader: false },
-  { id: 1, name: 'Tower Alpha', latitude: -23.55, longitude: -46.63, is_leader: false },
-  { id: 1, name: 'Tower Alpha', latitude: -23.55, longitude: -46.63, is_leader: false },
-  { id: 2, name: 'Tower Bravo', latitude: -22.9, longitude: -43.2, is_leader: true },
-];
-const MOCK_VEHICLES = [
-  { id: 1, name: 'Helicopter A', type: 'Helicopter', latitude: -23.5, longitude: -46.6 },
-  { id: 1, name: 'Helicopter A', type: 'Helicopter', latitude: -23.5, longitude: -46.6 },
-  { id: 1, name: 'Helicopter A', type: 'Helicopter', latitude: -23.5, longitude: -46.6 },
-  { id: 1, name: 'Helicopter A', type: 'Helicopter', latitude: -23.5, longitude: -46.6 },
-  { id: 2, name: 'Ship B', type: 'Ship', latitude: -22.9, longitude: -43.2 },
-  { id: 2, name: 'Ship B', type: 'Ship', latitude: -22.9, longitude: -43.2 },
-  { id: 2, name: 'Ship B', type: 'Ship', latitude: -22.9, longitude: -43.2 },
-  { id: 2, name: 'Ship B', type: 'Ship', latitude: -22.9, longitude: -43.2 },
-];
-const MOCK_STRUCTURES = [
-  { id: 1, name: 'Platform X', latitude: -24.55, longitude: -46.62, type: 'Platform' },
-  { id: 1, name: 'Platform X', latitude: -24.55, longitude: -46.62, type: 'Platform' },
-  { id: 1, name: 'Platform X', latitude: -24.55, longitude: -46.62, type: 'Platform' },
-  { id: 1, name: 'Platform X', latitude: -24.55, longitude: -46.62, type: 'Platform' },
-  { id: 1, name: 'Platform X', latitude: -24.55, longitude: -46.62, type: 'Platform' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-  { id: 2, name: 'Central Y', latitude: -22.95, longitude: -43.25, type: 'Central' },
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
+async function fetchJson(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Erro na requisição: ${response.status}`);
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
 
 const DELETABLE_TYPES = ['Torre', 'Tower Leader'];
 
@@ -163,10 +143,15 @@ function AddTowerPage({ onAdd }) {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
   };
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAdd({ ...form, id: Date.now(), is_leader: false });
-    navigate('/');
+    try {
+      await onAdd({ ...form, is_leader: false });
+      navigate('/');
+    } catch (err) {
+      alert('Falha ao salvar torre.');
+      console.error(err);
+    }
   };
   return (
     <div className="p-6 flex flex-col items-center">
@@ -208,10 +193,15 @@ function AddStructurePage({ onAdd }) {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
   };
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAdd({ ...form, id: Date.now() });
-    navigate('/');
+    try {
+      await onAdd({ ...form });
+      navigate('/');
+    } catch (err) {
+      alert('Falha ao salvar estrutura.');
+      console.error(err);
+    }
   };
   return (
     <div className="p-6 flex flex-col items-center">
@@ -254,10 +244,15 @@ function AddVehiclePage({ onAdd }) {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
   };
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onAdd({ ...form, id: Date.now() });
-    navigate('/');
+    try {
+      await onAdd({ ...form });
+      navigate('/');
+    } catch (err) {
+      alert('Falha ao salvar veículo.');
+      console.error(err);
+    }
   };
   return (
     <div className="p-6 flex flex-col items-center">
@@ -293,7 +288,7 @@ function AddVehiclePage({ onAdd }) {
 }
 
 
-function HomePage({ towers, vehicles, structures, setTowers, setVehicles, setStructures }) {
+function HomePage({ towers, vehicles, structures, onDeleteTower }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const navigate = useNavigate();
@@ -336,14 +331,19 @@ function HomePage({ towers, vehicles, structures, setTowers, setVehicles, setStr
     setSelectedItem(item);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selectedItem || !DELETABLE_TYPES.includes(selectedItem.typeLabel)) {
       setSelectedItem(null);
       return;
     }
-
-    setTowers((prev) => prev.filter((t) => t.id !== selectedItem.id));
-    setSelectedItem(null);
+    try {
+      await onDeleteTower(selectedItem.id);
+    } catch (err) {
+      alert('Falha ao excluir torre.');
+      console.error(err);
+    } finally {
+      setSelectedItem(null);
+    }
   };
 
   const platforms = structures.filter((s) => s.type === 'Platform');
@@ -507,9 +507,81 @@ function HomePage({ towers, vehicles, structures, setTowers, setVehicles, setStr
 
 
 export default function App() {
-  const [towers, setTowers] = useState(MOCK_TOWERS);
-  const [vehicles, setVehicles] = useState(MOCK_VEHICLES);
-  const [structures, setStructures] = useState(MOCK_STRUCTURES);
+  const [towers, setTowers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [structures, setStructures] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [towersData, vehiclesData, structuresData] = await Promise.all([
+          fetchJson('/api/towers'),
+          fetchJson('/api/vehicles'),
+          fetchJson('/api/structures'),
+        ]);
+        setTowers(towersData || []);
+        setVehicles(vehiclesData || []);
+        setStructures(structuresData || []);
+      } catch (err) {
+        console.error(err);
+        setError('Não foi possível carregar dados do servidor.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const addTower = async (data) => {
+    const payload = {
+      name: data.name,
+      latitude: parseFloat(data.latitude),
+      longitude: parseFloat(data.longitude),
+      is_leader: !!data.is_leader,
+    };
+    const created = await fetchJson('/api/towers', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setTowers((prev) => [...prev, created]);
+  };
+
+  const addVehicle = async (data) => {
+    const payload = {
+      name: data.name,
+      type: data.type,
+      latitude: parseFloat(data.latitude),
+      longitude: parseFloat(data.longitude),
+    };
+    const created = await fetchJson('/api/vehicles', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setVehicles((prev) => [...prev, created]);
+  };
+
+  const addStructure = async (data) => {
+    const payload = {
+      name: data.name,
+      type: data.type,
+      latitude: parseFloat(data.latitude),
+      longitude: parseFloat(data.longitude),
+    };
+    const created = await fetchJson('/api/structures', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setStructures((prev) => [...prev, created]);
+  };
+
+  const deleteTower = async (id) => {
+    await fetchJson(`/api/towers/${id}`, { method: 'DELETE' });
+    setTowers((prev) => prev.filter((t) => t.id !== id));
+  };
 
   const appWrapperStyle = {
     minHeight: '100vh',
@@ -525,24 +597,43 @@ export default function App() {
     <Router>
       <div style={appWrapperStyle}>
         <div style={contentStyle}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <HomePage
-                  towers={towers}
-                  vehicles={vehicles}
-                  structures={structures}
-                  setTowers={setTowers}
-                  setVehicles={setVehicles}
-                  setStructures={setStructures}
-                />
-              }
-            />
-            <Route path="/add-tower" element={<AddTowerPage onAdd={(t) => setTowers((prev) => [...prev, t])} />} />
-            <Route path="/add-vehicle" element={<AddVehiclePage onAdd={(v) => setVehicles((prev) => [...prev, v])} />} />
-            <Route path="/add-structure" element={<AddStructurePage onAdd={(s) => setStructures((prev) => [...prev, s])} />} />
-          </Routes>
+          {error && (
+            <div className="p-4 bg-red-100 text-red-700 text-center">
+              {error}
+            </div>
+          )}
+          {loading ? (
+            <div className="p-6 text-center text-gray-600">Carregando...</div>
+          ) : (
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <HomePage
+                    towers={towers}
+                    vehicles={vehicles}
+                    structures={structures}
+                    setTowers={setTowers}
+                    setVehicles={setVehicles}
+                    setStructures={setStructures}
+                    onDeleteTower={deleteTower}
+                  />
+                }
+              />
+              <Route
+                path="/add-tower"
+                element={<AddTowerPage onAdd={addTower} />}
+              />
+              <Route
+                path="/add-vehicle"
+                element={<AddVehiclePage onAdd={addVehicle} />}
+              />
+              <Route
+                path="/add-structure"
+                element={<AddStructurePage onAdd={addStructure} />}
+              />
+            </Routes>
+          )}
         </div>
       </div>
     </Router>
