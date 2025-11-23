@@ -13,6 +13,11 @@ if (args.Length < 3)
 {
     Console.WriteLine("Uso: MobilityCore.Application <vehicle_type> <latitude> <longitude> [tower_address]");
     Console.WriteLine("vehicle_type: Ship ou Helicopter");
+    Console.WriteLine("\nVariáveis de ambiente opcionais:");
+    Console.WriteLine("  RABBITMQ_HOST - Host do RabbitMQ (padrão: localhost)");
+    Console.WriteLine("  RABBITMQ_PORT - Porta do RabbitMQ (padrão: 5672)");
+    Console.WriteLine("  RABBITMQ_USERNAME - Usuário do RabbitMQ (padrão: guest)");
+    Console.WriteLine("  RABBITMQ_PASSWORD - Senha do RabbitMQ (padrão: guest)");
     Environment.Exit(1);
 }
 
@@ -31,9 +36,38 @@ Console.WriteLine($"Veículo criado: UUID={vehicle.Uuid}, Tipo={vehicle.Type}, P
 var httpClient = new HttpClient();
 var towerService = new TowerService(httpClient);
 
+var rabbitmqHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+var rabbitmqPortStr = Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672";
+if (!int.TryParse(rabbitmqPortStr, out var rabbitmqPort))
+{
+    Console.WriteLine($"ERRO: Porta do RabbitMQ inválida: {rabbitmqPortStr}");
+    Environment.Exit(1);
+}
+var rabbitmqUsername = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "guest";
+var rabbitmqPassword = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "guest";
+
+RabbitMQService? rabbitMQService = null;
+try
+{
+    rabbitMQService = new RabbitMQService(rabbitmqHost, rabbitmqPort, rabbitmqUsername, rabbitmqPassword);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Aviso: Não foi possível conectar ao RabbitMQ: {ex.Message}");
+    Console.WriteLine("A aplicação continuará sem publicar métricas e eventos de audit.");
+}
+
+AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+{
+    rabbitMQService?.Dispose();
+};
+
 const int initialWaitSeconds = 5;
 const int retryWaitSeconds = 10;
 const int movementIntervalMs = 1000;
+const int metricsIntervalMs = 2000;
+
+var random = new Random();
 
 while (true)
 {
@@ -103,8 +137,25 @@ while (true)
             Console.WriteLine($"Slot concedido! Movendo-se para {structureType} {structureUuid}...");
             vehicle.Status = StatusMovimento.InTransit;
 
+            if (rabbitMQService != null)
+            {
+                var departedEvent = new AuditMessage
+                {
+                    VehicleType = vehicle.Type == VehicleType.Helicopter ? "helicopter" : "ship",
+                    VehicleUuid = vehicle.Uuid,
+                    StructureType = structureType,
+                    StructureUuid = structureUuid,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Event = "departed",
+                    SlotNumber = slotNumber,
+                    TowerId = selectedTower.TowerUuid
+                };
+                rabbitMQService.PublishAudit(departedEvent);
+            }
+
             var destino = new GeoPoint(structure.Latitude, structure.Longitude);
             bool arrived = false;
+            var lastMetricsTime = DateTime.UtcNow;
 
             while (!arrived)
             {
@@ -112,6 +163,13 @@ while (true)
                 var distance = GeoHelper.HaversineDistance(vehicle.Position, destino);
                 Console.WriteLine($"Posição atual: ({vehicle.Position.Latitude:F6}, {vehicle.Position.Longitude:F6}), " +
                                 $"Distância ao destino: {distance:F2}m");
+
+                if (rabbitMQService != null && (DateTime.UtcNow - lastMetricsTime).TotalMilliseconds >= metricsIntervalMs)
+                {
+                    var metrics = GenerateMetrics(vehicle, random);
+                    rabbitMQService.PublishMetrics(metrics);
+                    lastMetricsTime = DateTime.UtcNow;
+                }
 
                 if (!arrived)
                 {
@@ -121,6 +179,22 @@ while (true)
 
             Console.WriteLine("Chegou ao destino!");
             vehicle.Status = StatusMovimento.Parked;
+
+            if (rabbitMQService != null)
+            {
+                var arrivedEvent = new AuditMessage
+                {
+                    VehicleType = vehicle.Type == VehicleType.Helicopter ? "helicopter" : "ship",
+                    VehicleUuid = vehicle.Uuid,
+                    StructureType = structureType,
+                    StructureUuid = structureUuid,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Event = "arrived",
+                    SlotNumber = slotNumber,
+                    TowerId = selectedTower.TowerUuid
+                };
+                rabbitMQService.PublishAudit(arrivedEvent);
+            }
 
             Console.WriteLine("Aguardando no destino...");
             await Task.Delay(TimeSpan.FromSeconds(30));
@@ -138,4 +212,29 @@ while (true)
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
         await Task.Delay(TimeSpan.FromSeconds(retryWaitSeconds));
     }
+}
+
+static MetricsMessage GenerateMetrics(Vehicle vehicle, Random random)
+{
+    var fuelLevel = Math.Max(0.5, 1.0 - (random.NextDouble() * 0.5));
+    var baseTemp = vehicle.Type == VehicleType.Helicopter ? 40.0 : 35.0;
+    var temperature = baseTemp + (random.NextDouble() * 20.0); // 35-55 para navio, 40-60 para helicóptero
+    
+    // CPU e memória variam entre 0.2 e 0.8
+    var cpuUsage = 0.2 + (random.NextDouble() * 0.6);
+    var memUsage = 0.2 + (random.NextDouble() * 0.6);
+    
+    // Memória em bytes (simula entre 2MB e 8MB)
+    var memUsageBytes = (long)(2_000_000 + (random.NextDouble() * 6_000_000));
+
+    return new MetricsMessage
+    {
+        Latitude = vehicle.Position.Latitude,
+        Longitude = vehicle.Position.Longitude,
+        FuelLevel = fuelLevel,
+        Temperature = temperature,
+        CpuUsage = cpuUsage,
+        MemUsage = memUsage,
+        MemUsageBytes = memUsageBytes
+    };
 }
