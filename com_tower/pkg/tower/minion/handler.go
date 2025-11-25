@@ -1,7 +1,6 @@
 package minion
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -24,12 +23,7 @@ func newHandler(service service) handler {
 
 func (h handler) ListTowers(ctx *gin.Context) {
 	towers := h.service.ListTowers()
-
-	response, err := json.Marshal(types.TowersPayload{Towers: towers})
-	if err != nil {
-		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
-		return
-	}
+	response := types.TowersPayload{Towers: towers}
 
 	ctx.JSON(http.StatusOK, response)
 }
@@ -37,18 +31,13 @@ func (h handler) ListTowers(ctx *gin.Context) {
 func (h handler) ListStructures(ctx *gin.Context) {
 	structures := h.service.ListStructures()
 
-	response, err := json.Marshal(structures)
-	if err != nil {
-		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, response)
+	ctx.JSON(http.StatusOK, structures)
 }
 
 func (h handler) SyncTowers(ctx *gin.Context) {
 	var towers types.TowersPayload
-	if err := ctx.ShouldBindJSON(towers); err != nil {
+	if err := ctx.ShouldBindJSON(&towers); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}
@@ -59,7 +48,8 @@ func (h handler) SyncTowers(ctx *gin.Context) {
 
 func (h handler) SyncStructures(ctx *gin.Context) {
 	var structures types.Structures
-	if err := ctx.ShouldBindJSON(structures); err != nil {
+	if err := ctx.ShouldBindJSON(&structures); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}
@@ -70,19 +60,15 @@ func (h handler) SyncStructures(ctx *gin.Context) {
 
 func (h handler) CheckSlotAvailability(ctx *gin.Context) {
 	var slotRequest types.SlotRequest
-	if err := ctx.ShouldBindJSON(slotRequest); err != nil {
+	if err := ctx.ShouldBindJSON(&slotRequest); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}
 
-	result, err := h.service.CheckSlotAvailability(ctx, slotRequest)
+	response, err := h.service.CheckSlotAvailability(ctx, slotRequest)
 	if err != nil {
-		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
-		return
-	}
-
-	response, err := json.Marshal(result)
-	if err != nil {
+		log.Printf("failed to check slot availability: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}
@@ -92,35 +78,30 @@ func (h handler) CheckSlotAvailability(ctx *gin.Context) {
 
 func (h handler) HandleElection(ctx *gin.Context) {
 	var req types.ElectionRequest
-	if err := ctx.ShouldBindJSON(req); err != nil {
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}
 
 	uptime := config.Configuration.GetUptimeSeconds()
 
-	var electionResp types.ElectionResponse
+	var response types.ElectionResponse
 	if uptime > req.CandidateUptime {
 		log.Printf("[minion][election] my uptime (%.2fs) > candidate's uptime (%.2fs): starting my own election", uptime, req.CandidateUptime)
 		if !config.Configuration.IsLeader() {
 			go leaderelection.StartElection(h.service.ListTowers())
 		}
-		electionResp = types.ElectionResponse{
+		response = types.ElectionResponse{
 			Uptime:          uptime,
 			HasHigherUptime: true,
 		}
 	} else {
 		log.Printf("my uptime (%.2fs) <= candidate's uptime (%.2fs): confirming vote in candidate", uptime, req.CandidateUptime)
-		electionResp = types.ElectionResponse{
+		response = types.ElectionResponse{
 			Uptime:          uptime,
 			HasHigherUptime: false,
 		}
-	}
-
-	response, err := json.Marshal(electionResp)
-	if err != nil {
-		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
-		return
 	}
 
 	ctx.JSON(http.StatusOK, response)
@@ -128,7 +109,8 @@ func (h handler) HandleElection(ctx *gin.Context) {
 
 func (h handler) SetNewLeader(ctx *gin.Context) {
 	var req types.NewLeaderRequest
-	if err := ctx.ShouldBindJSON(req); err != nil {
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}

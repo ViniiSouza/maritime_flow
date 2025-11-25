@@ -24,7 +24,7 @@ func newIntegration() integration {
 }
 
 func (i integration) RequestSlotToStructure(ctx context.Context, slotRequest types.SlotRequest) (*types.SlotResponse, error) {
-	url := fmt.Sprintf("%s.%s.%s/slots", slotRequest.StructureUUID, slotRequest.StructureType, config.Configuration.GetBaseDns())
+	url := fmt.Sprintf("http://s-%s.%s.%s/slots", slotRequest.StructureUUID, slotRequest.StructureType, config.Configuration.GetBaseDns())
 	payload, err := json.Marshal(slotRequest.StructureSlotRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal slot request for %s %s: %w", slotRequest.StructureType, slotRequest.StructureUUID, err)
@@ -51,7 +51,7 @@ func (i integration) RequestSlotToStructure(ctx context.Context, slotRequest typ
 }
 
 func (i integration) AcquireSlotLockInTowerLeader(ctx context.Context, slotRequest types.AcquireSlotRequest) (*types.AcquireSlotResponse, error) {
-	url := fmt.Sprintf("%s.tower.%s/acquire-slot", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
+	url := fmt.Sprintf("http://t-%s.tower.%s/acquire-slot", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
 	payload, err := json.Marshal(slotRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal slot acquire request for %s %d in structure %s: %w", slotRequest.SlotType, slotRequest.SlotNumber, slotRequest.StructureUUID, err)
@@ -78,7 +78,7 @@ func (i integration) AcquireSlotLockInTowerLeader(ctx context.Context, slotReque
 }
 
 func (i integration) SendHealthCheck(ctx context.Context) error {
-	url := fmt.Sprintf("%s.tower.%s/tower-health", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
+	url := fmt.Sprintf("http://t-%s.tower.%s/tower-health", config.Configuration.GetLeaderUUIDAsString(), config.Configuration.GetBaseDns())
 	payload, err := json.Marshal(types.TowerHealthRequest{Id: config.Configuration.GetId()})
 	if err != nil {
 		return fmt.Errorf("failed to marshal healthcheck request for tower %s: %w", config.Configuration.GetIdAsString(), err)
@@ -104,7 +104,7 @@ func (i integration) SendHealthCheck(ctx context.Context) error {
 }
 
 func (i integration) ReleaseSlot(ctx context.Context, structureUuid types.UUID, structureType types.StructureType, slotRequest types.ReleaseSlotRequest) error {
-	url := fmt.Sprintf("%s.%s.%s/release-slot", structureUuid, structureType, config.Configuration.GetBaseDns())
+	url := fmt.Sprintf("http://s-%s.%s.%s/release-slot", structureUuid, structureType, config.Configuration.GetBaseDns())
 	payload, err := json.Marshal(slotRequest)
 	if err != nil {
 		return fmt.Errorf("failed to marshal release slot request for %s %s: %w", structureType, structureUuid, err)
@@ -130,7 +130,7 @@ func (i integration) ReleaseSlot(ctx context.Context, structureUuid types.UUID, 
 }
 
 func (i integration) ReleaseSlotLock(ctx context.Context, slotRequest types.ReleaseSlotLockRequest) error {
-	url := fmt.Sprintf("%s.tower.%s/release-slot", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
+	url := fmt.Sprintf("http://t-%s.tower.%s/release-slot", config.Configuration.GetLeaderUUID(), config.Configuration.GetBaseDns())
 	payload, err := json.Marshal(slotRequest)
 	if err != nil {
 		return fmt.Errorf("failed to marshal release slot request for tower %s: %w", config.Configuration.GetIdAsString(), err)

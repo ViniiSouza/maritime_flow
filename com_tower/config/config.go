@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
@@ -25,7 +25,7 @@ type Config struct {
 	towersQueue string
 	auditQueue  string
 
-	db       *pgx.Conn
+	db       *pgxpool.Pool
 	rabbitmq *amqp.Channel
 
 	uptime time.Time
@@ -46,7 +46,7 @@ func (c *Config) GetIdAsString() string {
 	return c.id.String()
 }
 
-func (c *Config) GetDBConn() *pgx.Conn {
+func (c *Config) GetDBPool() *pgxpool.Pool {
 	return c.db
 }
 
@@ -68,6 +68,10 @@ func (c *Config) GetBaseDns() string {
 
 func (c *Config) GetLeaderUUID() types.UUID {
 	return c.leaderUuid
+}
+
+func (c *Config) GetLeaderUUIDAsString() string {
+	return c.leaderUuid.String()
 }
 
 func (c *Config) SetLeaderUUID(id types.UUID) {
@@ -112,9 +116,9 @@ func InitConfig(ctx context.Context) {
 		log.Fatalf("invalid id %s in env %s: %v", id, utils.TowerIdEnv, err)
 	}
 
-	conn, err := pgx.Connect(ctx, os.Getenv(utils.PostgresURIEnv))
+	pool, err := pgxpool.New(ctx, os.Getenv(utils.PostgresURIEnv))
 	if err != nil {
-		log.Fatalf("failed to establish database connection: %v", err)
+		log.Fatalf("failed to establish database connection pool: %v", err)
 	}
 
 	channel := initRabbitMQ()
@@ -168,7 +172,7 @@ func InitConfig(ctx context.Context) {
 		baseDns:             dns,
 		towersQueue:         towersQueue,
 		auditQueue:          auditQueue,
-		db:                  conn,
+		db:                  pool,
 		rabbitmq:            channel,
 		uptime:              time.Now(),
 		maxLeaderFailures:   maxLeaderFailures,

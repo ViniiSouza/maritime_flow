@@ -15,8 +15,4 @@ const (
 	RenewLockIntervalEnv   = "RENEW_LOCK_INTERVAL"
 	RenewLockTimeoutEnv    = "RENEW_LOCK_TIMEOUT"
 	BaseDnsEnv             = "BASE_DNS"
-
-	// paths
-	TowersPropagationPath     = "/towers"
-	StructuresPropagationPath = "/structures"
 )

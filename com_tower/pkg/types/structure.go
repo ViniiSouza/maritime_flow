@@ -7,15 +7,15 @@ const (
 	CentralStructureType  StructureType = "central"
 )
 
-type slots struct {
-	DocksQtt    int `json:"docks_qtt"`
-	HelipadsQtt int `json:"helipads_qtt"`
+type StructureSlots struct {
+	DocksQtt    int `json:"docks_qtt" db:"docks_qtt"`
+	HelipadsQtt int `json:"helipads_qtt" db:"helipads_qtt"`
 }
 
 type Structure struct {
-	Latitude  float64 `json:"latitude" db:"latitude"`
-	Longitude float64 `json:"longitude" db:"longitude"`
-	Slots     slots   `json:"slots"`
+	Latitude  float64        `json:"latitude" db:"latitude"`
+	Longitude float64        `json:"longitude" db:"longitude"`
+	Slots     StructureSlots `json:"slots" db:"slots"`
 }
 
 type Platform struct {

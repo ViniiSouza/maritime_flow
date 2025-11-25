@@ -6,6 +6,7 @@ import (
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
+	"github.com/google/uuid"
 )
 
 const (
@@ -14,18 +15,23 @@ const (
 )
 
 func AcquireLockIfEmptyAndReturnLeaderUUID(ctx context.Context) types.UUID {
-	tag, err := config.Configuration.GetDBConn().Exec(ctx, AcquireLockQuery, config.Configuration.GetId())
+	tag, err := config.Configuration.GetDBPool().Exec(ctx, AcquireLockQuery, config.Configuration.GetId())
 	if err != nil {
 		log.Fatalf("failed to ensure leader lock: %v", err)
 	}
 
 	if tag.RowsAffected() == 0 {
-		var id types.UUID
-		if err := config.Configuration.GetDBConn().QueryRow(ctx, GetLeaderQuery).Scan(&id); err != nil {
+		var id string
+		if err := config.Configuration.GetDBPool().QueryRow(ctx, GetLeaderQuery).Scan(&id); err != nil {
 			log.Fatalf("failed to query leader uuid: %v", err)
 		}
 
-		return id
+		uuid, err := uuid.Parse(id)
+		if err != nil {
+			log.Fatalf("failed to parse leader uuid: %v", err)
+		}
+
+		return types.UUID(uuid)
 	}
 
 	return config.Configuration.GetId()

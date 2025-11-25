@@ -3,24 +3,30 @@ package leader
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+const (
+	listStructuresQuery = "SELECT st.id, st.latitude, st.longitude, jsonb_build_object('docks_qtt', COUNT(*) FILTER (WHERE sl.type = 'Dock'), 'helipads_qtt', COUNT(*) FILTER (WHERE sl.type = 'Helipad')) AS slots FROM structures st LEFT JOIN slots sl ON st.id = sl.structure_id WHERE st.type = $1 GROUP BY st.id;"
 )
 
 type repository struct {
-	DB *pgx.Conn
+	DB *pgxpool.Pool
 }
 
 func newRepository() repository {
 	return repository{
-		DB: config.Configuration.GetDBConn(),
+		DB: config.Configuration.GetDBPool(),
 	}
 }
 
 func (r repository) GetTowerById(ctx context.Context, id types.UUID) (types.Tower, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id FROM towers WHERE id == $1;", id.String())
+	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM towers WHERE id = $1;", id.String())
 	if err != nil {
 		return types.Tower{}, err
 	}
@@ -29,12 +35,12 @@ func (r repository) GetTowerById(ctx context.Context, id types.UUID) (types.Towe
 }
 
 func (r repository) UpdateTowerLastSeen(ctx context.Context, id types.UUID) (err error) {
-	_, err = r.DB.Exec(ctx, "UPDATE towers SET last_seen = NOW() WHERE id == $1;", id.String())
+	_, err = r.DB.Exec(ctx, "UPDATE towers SET last_seen_at = NOW() WHERE id = $1;", id.String())
 	return
 }
 
 func (r repository) ListTowersByLastSeenAt(ctx context.Context, heartbeatTimeout int) ([]types.Tower, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM towers WHERE last_seen_at >= (NOW() - ($1 || ' seconds')::interval);", heartbeatTimeout)
+	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM towers WHERE last_seen_at >= (NOW() - ($1 || ' seconds')::interval);", strconv.Itoa(heartbeatTimeout))
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +49,7 @@ func (r repository) ListTowersByLastSeenAt(ctx context.Context, heartbeatTimeout
 }
 
 func (r repository) ListPlatforms(ctx context.Context) ([]types.Platform, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM platforms;")
+	rows, err := r.DB.Query(ctx, listStructuresQuery, "Platform")
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +58,7 @@ func (r repository) ListPlatforms(ctx context.Context) ([]types.Platform, error)
 }
 
 func (r repository) ListCentrals(ctx context.Context) ([]types.Central, error) {
-	rows, err := r.DB.Query(ctx, "SELECT id, latitude, longitude FROM centrals;")
+	rows, err := r.DB.Query(ctx, listStructuresQuery, "Central")
 	if err != nil {
 		return nil, err
 	}
@@ -61,17 +67,17 @@ func (r repository) ListCentrals(ctx context.Context) ([]types.Central, error) {
 }
 
 func (r repository) GetSlotUUID(ctx context.Context, structureUuid types.UUID, slotType types.SlotType, slotNumber int) (slotUuid types.UUID, err error) {
-	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3;", structureUuid, slotType, slotNumber).Scan(&slotUuid)
+	err = r.DB.QueryRow(ctx, "SELECT id FROM slots WHERE structure_id = $1 AND type = $2 AND number = $3;", structureUuid.String(), slotType, strconv.Itoa(slotNumber)).Scan(&slotUuid)
 	return
 }
 
 func (r repository) CheckSlotAvailability(ctx context.Context, slotUuid types.UUID) (isAvailable bool, err error) {
-	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1);", slotUuid).Scan(&isAvailable)
+	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1);", slotUuid.String()).Scan(&isAvailable)
 	return
 }
 
 func (r repository) AcquireSlot(ctx context.Context, vehicleUuid types.UUID, slotUuid types.UUID) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = $1 WHERE id = $2;", slotUuid, vehicleUuid)
+	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = $1 WHERE id = $2;", slotUuid.String(), vehicleUuid.String())
 	if err != nil {
 		return err
 	}
@@ -84,7 +90,7 @@ func (r repository) AcquireSlot(ctx context.Context, vehicleUuid types.UUID, slo
 }
 
 func (r repository) ReleaseSlot(ctx context.Context, vehicleUuid types.UUID, slotUuid types.UUID) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = NULL WHERE id = $1 AND current_slot_id = $2;", vehicleUuid, slotUuid)
+	tag, err := r.DB.Exec(ctx, "UPDATE vehicles SET current_slot_id = NULL WHERE id = $1 AND current_slot_id = $2;", vehicleUuid.String(), slotUuid.String())
 	if err != nil {
 		return err
 	}
@@ -97,7 +103,7 @@ func (r repository) ReleaseSlot(ctx context.Context, vehicleUuid types.UUID, slo
 }
 
 func (r repository) AcquireLock(ctx context.Context) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id IS NULL OR renewed_at < (NOW() - ($2 || ' seconds')::interval);;", config.Configuration.GetId(), config.Configuration.GetRenewLockTimeout())
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id = $1 OR leader_id IS NULL OR renewed_at < (NOW() - ($2 || ' seconds')::interval);;", config.Configuration.GetIdAsString(), strconv.Itoa(int(config.Configuration.GetRenewLockTimeout().Seconds())))
 	if err != nil {
 		return err
 	}
@@ -110,7 +116,7 @@ func (r repository) AcquireLock(ctx context.Context) error {
 }
 
 func (r repository) ReleaseLock(ctx context.Context) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = NULL WHERE leader_id = $1;", config.Configuration.GetId())
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = NULL WHERE leader_id = $1;", config.Configuration.GetIdAsString())
 	if err != nil {
 		return err
 	}
@@ -123,7 +129,7 @@ func (r repository) ReleaseLock(ctx context.Context) error {
 }
 
 func (r repository) RenewLock(ctx context.Context) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id = $1;", config.Configuration.GetId())
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id = $1;", config.Configuration.GetIdAsString())
 	if err != nil {
 		return err
 	}
