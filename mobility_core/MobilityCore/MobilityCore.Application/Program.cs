@@ -90,7 +90,7 @@ while (true)
         }
 
         var selectedTower = towers[0];
-        var towerAddress = $"{selectedTower.TowerUuid}.{baseDns}";
+        var towerAddress = $"t-{selectedTower.TowerUuid}.{baseDns}";
         Console.WriteLine($"Torre selecionada: {selectedTower.TowerUuid} em {towerAddress}");
 
         Console.WriteLine("Buscando estruturas disponíveis...");
