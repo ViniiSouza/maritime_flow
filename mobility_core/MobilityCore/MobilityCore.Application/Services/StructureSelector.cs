@@ -39,7 +39,7 @@ public class StructureSelector
         var maxSlots = slotType == "helipad"
             ? selected.structure.Slots.HelipadsQtt
             : selected.structure.Slots.DocksQtt;
-        var slotNumber = random.Next(maxSlots);
+        var slotNumber = random.Next(1, maxSlots);
 
         return (selected.structure, selected.type, slotNumber, slotType);
     }

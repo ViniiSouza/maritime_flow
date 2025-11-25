@@ -33,14 +33,14 @@ class SlotState(str, Enum):
 
 
 # Estado em memória - slots disponíveis/ocupados
-# Estrutura: {"docks": [True, True, ...], "helipads": [True, True, ...]}
-slots: Dict[str, List[bool]] = {"docks": [], "helipads": []}
+# Estrutura: {"dock": [True, True, ...], "helipad": [True, True, ...]}
+slots: Dict[str, List[bool]] = {SlotType.DOCK: [], SlotType.HELIPAD: []}
 
 for i in range(DOCKS_QTT):
-    slots["docks"].append(FREE)
+    slots[SlotType.DOCK].append(FREE)
 
 for i in range(HELIPADS_QTT):
-    slots["helipads"].append(FREE)
+    slots[SlotType.HELIPAD].append(FREE)
 
 
 class SlotRequest(BaseModel):
@@ -62,31 +62,30 @@ async def root():
 
 
 @app.post("/slots", response_model=SlotResponse)
-async def check_slot(request: SlotRequest):
+async def acquire_slot(request: SlotRequest):
     """
-    Endpoint para verificar o estado de um slot específico
-    Chamado pela Torre (T) para verificar disponibilidade
+    Endpoint para alocar um slot em específico, se disponível
+    Chamado pela Torre (T) para verificar disponibilidade e alocar se possível
     """
     slot_type = request.slot_type.value  
     
     if slot_type not in slots:
         raise HTTPException(status_code=500, detail="Internal error: slot type not initialized")
     
-    if request.slot_number < 0 or request.slot_number >= len(slots[slot_type]):
+    if request.slot_number <= 0 or request.slot_number > len(slots[slot_type]):
         raise HTTPException(
             status_code=404,
             detail=f"Slot {request.slot_number} of type {slot_type} not found"
         )
     
-    if slots[slot_type][request.slot_number] == FREE:
-        state = SlotState.FREE
-    else:
-        state = SlotState.IN_USE
+    if slots[slot_type][request.slot_number - 1] == IN_USE:
+        return SlotResponse(state=SlotState.IN_USE)
     
-    return SlotResponse(state=state)
+    slots[slot_type][request.slot_number - 1] = IN_USE
+    return SlotResponse(state=SlotState.FREE)
 
 @app.post("/release-slot")
-async def check_slot(request: SlotRequest):
+async def release_slot(request: SlotRequest):
     """
     Endpoint para liberar um slot em específico
     Chamado pela Torre (T) quando a mesma identifica que
@@ -97,13 +96,13 @@ async def check_slot(request: SlotRequest):
     if slot_type not in slots:
         raise HTTPException(status_code=500, detail="Internal error: slot type not initialized")
     
-    if request.slot_number < 0 or request.slot_number >= len(slots[slot_type]):
+    if request.slot_number <= 0 or request.slot_number > len(slots[slot_type]):
         raise HTTPException(
             status_code=404,
             detail=f"Slot {request.slot_number} of type {slot_type} not found"
         )
     
-    slots[slot_type][request.slot_number] = FREE
+    slots[slot_type][request.slot_number - 1] = FREE
     
     return Response(status_code=HTTP_204_NO_CONTENT)
 
