@@ -11,9 +11,10 @@ using MobilityCore.Shared.Models;
 
 if (args.Length < 3)
 {
-    Console.WriteLine("Uso: MobilityCore.Application <vehicle_uuid> <vehicle_type> <latitude> <longitude> [tower_address]");
+    Console.WriteLine("Uso: MobilityCore.Application <vehicle_uuid> <vehicle_type> <latitude> <longitude> [towers_discovery_address]");
     Console.WriteLine("vehicle_type: Ship ou Helicopter");
     Console.WriteLine("\nVariáveis de ambiente opcionais:");
+    Console.WriteLine("  BASE_DNS - DNS base para concatenar com o Id da Torre (padrão: tower.svc.cluster.local)");
     Console.WriteLine("  RABBITMQ_HOST - Host do RabbitMQ (padrão: localhost)");
     Console.WriteLine("  RABBITMQ_PORT - Porta do RabbitMQ (padrão: 5672)");
     Console.WriteLine("  RABBITMQ_USERNAME - Usuário do RabbitMQ (padrão: guest)");
@@ -29,7 +30,7 @@ var vehicleType = typeStr.Equals("Helicopter", StringComparison.OrdinalIgnoreCas
 
 var lat = Convert.ToDouble(args[2]);
 var lon = Convert.ToDouble(args[3]);
-var towerAddress = args.Length > 4 ? args[4] : "localhost:5000";
+var towersDiscoveryAddress = args.Length > 4 ? args[4] : "towers-svc.tower.svc.cluster.local";
 
 Vehicle vehicle = new(vehicleType, lat, lon, uuid);
 Console.WriteLine($"Veículo criado: UUID={vehicle.Uuid}, Tipo={vehicle.Type}, Posição=({lat}, {lon})");
@@ -37,6 +38,7 @@ Console.WriteLine($"Veículo criado: UUID={vehicle.Uuid}, Tipo={vehicle.Type}, P
 var httpClient = new HttpClient();
 var towerService = new TowerService(httpClient);
 
+var baseDns = Environment.GetEnvironmentVariable("BASE_DNS") ?? "tower.svc.cluster.local";
 var rabbitmqHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
 var rabbitmqPortStr = Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672";
 if (!int.TryParse(rabbitmqPortStr, out var rabbitmqPort))
@@ -77,8 +79,8 @@ while (true)
         Console.WriteLine($"Aguardando {initialWaitSeconds} segundos antes de solicitar slot...");
         await Task.Delay(TimeSpan.FromSeconds(initialWaitSeconds));
 
-        Console.WriteLine($"Buscando torres em {towerAddress}...");
-        var towers = await towerService.GetTowersAsync(towerAddress);
+        Console.WriteLine($"Buscando torres em {towersDiscoveryAddress}...");
+        var towers = await towerService.GetTowersAsync(towersDiscoveryAddress);
 
         if (towers.Count == 0)
         {
@@ -88,10 +90,11 @@ while (true)
         }
 
         var selectedTower = towers[0];
-        Console.WriteLine($"Torre selecionada: {selectedTower.TowerUuid} em {selectedTower.TowerAddress}");
+        var towerAddress = $"t-{selectedTower.TowerUuid}.{baseDns}";
+        Console.WriteLine($"Torre selecionada: {selectedTower.TowerUuid} em {towerAddress}");
 
         Console.WriteLine("Buscando estruturas disponíveis...");
-        var structuresResponse = await towerService.GetStructuresAsync(selectedTower.TowerAddress);
+        var structuresResponse = await towerService.GetStructuresAsync(towerAddress);
 
         if (structuresResponse == null)
         {
@@ -124,7 +127,7 @@ while (true)
         };
 
         Console.WriteLine("Solicitando permissão para o slot...");
-        var slotResponse = await towerService.RequestSlotAsync(selectedTower.TowerAddress, slotRequest);
+        var slotResponse = await towerService.RequestSlotAsync(towerAddress, slotRequest);
 
         if (slotResponse == null)
         {
