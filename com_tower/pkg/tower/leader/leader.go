@@ -96,7 +96,7 @@ func propagate(ctx context.Context, svc service) {
 			}
 
 			for _, tower := range healthyTowers {
-				baseEndpoint := fmt.Sprintf("%s.tower.%s", tower.UUID.String(), config.Configuration.GetBaseDns())
+				baseEndpoint := fmt.Sprintf("t-%s.tower.%s", tower.UUID.String(), config.Configuration.GetBaseDns())
 				towersEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.TowersPropagationPath)
 				structuresEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.StructuresPropagationPath)
 
