@@ -11,7 +11,7 @@ using MobilityCore.Shared.Models;
 
 if (args.Length < 3)
 {
-    Console.WriteLine("Uso: MobilityCore.Application <vehicle_type> <latitude> <longitude> [tower_address]");
+    Console.WriteLine("Uso: MobilityCore.Application <vehicle_uuid> <vehicle_type> <latitude> <longitude> [tower_address]");
     Console.WriteLine("vehicle_type: Ship ou Helicopter");
     Console.WriteLine("\nVariáveis de ambiente opcionais:");
     Console.WriteLine("  RABBITMQ_HOST - Host do RabbitMQ (padrão: localhost)");
@@ -21,16 +21,17 @@ if (args.Length < 3)
     Environment.Exit(1);
 }
 
-var typeStr = args[0];
+var uuid = args[0];
+var typeStr = args[1];
 var vehicleType = typeStr.Equals("Helicopter", StringComparison.OrdinalIgnoreCase)
     ? VehicleType.Helicopter
     : VehicleType.Ship;
 
-var lat = Convert.ToDouble(args[1]);
-var lon = Convert.ToDouble(args[2]);
-var towerAddress = args.Length > 3 ? args[3] : "localhost:5000";
+var lat = Convert.ToDouble(args[2]);
+var lon = Convert.ToDouble(args[3]);
+var towerAddress = args.Length > 4 ? args[4] : "localhost:5000";
 
-Vehicle vehicle = new(vehicleType, lat, lon);
+Vehicle vehicle = new(vehicleType, lat, lon, uuid);
 Console.WriteLine($"Veículo criado: UUID={vehicle.Uuid}, Tipo={vehicle.Type}, Posição=({lat}, {lon})");
 
 var httpClient = new HttpClient();
