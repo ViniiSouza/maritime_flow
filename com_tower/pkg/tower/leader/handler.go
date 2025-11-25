@@ -1,7 +1,7 @@
 package leader
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
@@ -21,7 +21,8 @@ func newHandler(service service) handler {
 
 func (h handler) MarkTowerAsAlive(ctx *gin.Context) {
 	var request types.TowerHealthRequest
-	if err := ctx.ShouldBindJSON(request); err != nil {
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidInput)
 		return
 	}
@@ -36,19 +37,15 @@ func (h handler) MarkTowerAsAlive(ctx *gin.Context) {
 
 func (h handler) AcquireSlot(ctx *gin.Context) {
 	var request types.AcquireSlotRequest
-	if err := ctx.ShouldBindJSON(request); err != nil {
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidInput)
 		return
 	}
 
-	result, err := h.service.AcquireSlot(ctx, request)
+	response, err := h.service.AcquireSlot(ctx, request)
 	if err != nil {
-		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
-		return
-	}
-
-	response, err := json.Marshal(result)
-	if err != nil {
+		log.Printf("failed to acquire slot: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}
@@ -58,12 +55,14 @@ func (h handler) AcquireSlot(ctx *gin.Context) {
 
 func (h handler) ReleaseSlot(ctx *gin.Context) {
 	var request types.ReleaseSlotLockRequest
-	if err := ctx.ShouldBindJSON(request); err != nil {
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		log.Printf("failed to unmarshal request: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, utils.ErrInvalidInput)
 		return
 	}
 
 	if err := h.service.ReleaseSlot(ctx, request); err != nil {
+		log.Printf("failed to release slot: %v", err)
 		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
 		return
 	}

@@ -96,9 +96,9 @@ func propagate(ctx context.Context, svc service) {
 			}
 
 			for _, tower := range healthyTowers {
-				baseEndpoint := fmt.Sprintf("t-%s.tower.%s", tower.UUID.String(), config.Configuration.GetBaseDns())
-				towersEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.TowersPropagationPath)
-				structuresEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, utils.StructuresPropagationPath)
+				baseEndpoint := fmt.Sprintf("http://t-%s.tower.%s", tower.UUID.String(), config.Configuration.GetBaseDns())
+				towersEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, "towers")
+				structuresEndpoint := fmt.Sprintf("%s/%s", baseEndpoint, "structures")
 
 				if err := doPropagateReq(ctx, towersEndpoint, towersPayload); err != nil {
 					log.Printf("[leader][propagate] failed to propagate healthy towers to tower %s: %v", tower.UUID.String(), err)
