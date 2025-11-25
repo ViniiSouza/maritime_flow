@@ -15,5 +15,6 @@ FROM cgr.dev/chainguard/wolfi-base
 
 WORKDIR /
 COPY --from=builder /app/app /
+ENV PORT=8000
 
 CMD ["/app"]
