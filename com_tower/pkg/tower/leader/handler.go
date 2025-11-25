@@ -35,6 +35,18 @@ func (h handler) MarkTowerAsAlive(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, nil)
 }
 
+func (h handler) ListHealthyTowers(ctx *gin.Context) {
+	towers, err := h.service.ListHealthyTowers(ctx)
+	if err != nil {
+		log.Printf("failed to list healthy towers: %v", err)
+		utils.SetContextAndExecJSONWithErrorResponse(ctx, err)
+		return
+	}
+
+	response := types.TowersPayload{Towers: towers}
+	ctx.JSON(http.StatusOK, response)
+}
+
 func (h handler) AcquireSlot(ctx *gin.Context) {
 	var request types.AcquireSlotRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {

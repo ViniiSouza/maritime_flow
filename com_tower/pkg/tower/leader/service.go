@@ -3,8 +3,8 @@ package leader
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
 )
 
@@ -42,10 +42,10 @@ func (s service) MarkTowerAsAlive(ctx context.Context, id types.UUID) (err error
 	return
 }
 
-func (s service) ListHealthyTowers(ctx context.Context, heartbeatTimeout time.Duration) (towers []types.Tower, err error) {
-	towers, err = s.repository.ListTowersByLastSeenAt(ctx, int(heartbeatTimeout.Seconds()))
+func (s service) ListHealthyTowers(ctx context.Context) (towers []types.Tower, err error) {
+	towers, err = s.repository.ListTowersByLastSeenAt(ctx, int(config.Configuration.GetHeartbeatTimeout().Seconds()))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list towers: %w", err)
+		return nil, err
 	}
 
 	return

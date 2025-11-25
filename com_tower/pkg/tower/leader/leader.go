@@ -71,7 +71,7 @@ func propagate(ctx context.Context, svc service) {
 	for {
 		select {
 		case <-time.After(config.Configuration.GetPropagationInterval()):
-			healthyTowers, err := svc.ListHealthyTowers(ctx, config.Configuration.GetHeartbeatTimeout())
+			healthyTowers, err := svc.ListHealthyTowers(ctx)
 			if err != nil {
 				log.Printf("[leader][propagate] failed to list healthy towers: %v", err)
 				break
