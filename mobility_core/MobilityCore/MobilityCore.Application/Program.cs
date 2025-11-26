@@ -109,7 +109,7 @@ while (true)
         }
 
         var (structure, structureType, slotNumber, slotType) =
-            StructureSelector.SelectStructureAndSlot(structuresResponse, vehicle.Type);
+            StructureSelector.SelectStructureAndSlot(structuresResponse, vehicle.Type, currentStructureUuid);
 
         if (structure == null)
         {

@@ -7,7 +7,8 @@ public class StructureSelector
 {
     public static (Structure? structure, string structureType, int slotNumber, string slotType) SelectStructureAndSlot(
         StructuresResponse structures,
-        VehicleType vehicleType)
+        VehicleType vehicleType,
+        string currentStructureUuid)
     {
         var slotType = vehicleType == VehicleType.Helicopter ? "helipad" : "dock";
         var allStructures = new List<(Structure structure, string type)>();
@@ -34,7 +35,11 @@ public class StructureSelector
         }
 
         var random = new Random();
-        var selected = availableStructures[random.Next(availableStructures.Count)];
+        (Structure structure, string type) selected;
+        do
+        {
+            selected = availableStructures[random.Next(availableStructures.Count)];
+        } while ((selected.type == "platform" ? selected.structure.PlatformUuid : selected.structure.CentralUuid) == currentStructureUuid);
 
         var maxSlots = slotType == "helipad"
             ? selected.structure.Slots.HelipadsQtt
