@@ -101,7 +101,7 @@ func (s service) ReleaseSlot(ctx context.Context, request types.ReleaseSlotLockR
 	}
 
 	if err := s.repository.ReleaseSlot(ctx, request.VehicleUUID, slotUuid); err != nil {
-		return fmt.Errorf("failed to acquire slot %s: %w", slotUuid.String(), err)
+		return fmt.Errorf("failed to release slot %s: %w", slotUuid.String(), err)
 	}
 
 	return nil 
