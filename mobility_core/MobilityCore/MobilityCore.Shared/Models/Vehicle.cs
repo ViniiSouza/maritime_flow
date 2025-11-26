@@ -8,11 +8,11 @@ public class Vehicle
     public GeoPoint Position { get; set; }
     public StatusMovimento Status { get; set; }
 
-    public Vehicle(VehicleType type, double lat, double lon, string? uuid = null)
+    public Vehicle(VehicleType type, double lat, double lon, double vel, string? uuid = null)
     {
         Uuid = uuid ?? Guid.NewGuid().ToString("N");
         Type = type;
-        Velocity = type == VehicleType.Helicopter ? 80 : 50;
+        Velocity = vel;
         Position = new GeoPoint(lat, lon);
         Status = StatusMovimento.Stationary;
     }

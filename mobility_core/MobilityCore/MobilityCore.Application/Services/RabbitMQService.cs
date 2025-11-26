@@ -79,7 +79,28 @@ public class RabbitMQService : IDisposable
         }
     }
 
-    public void PublishAudit(AuditMessage message)
+    public void PublishAuditArrived(AuditMessage message)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(message, _jsonOptions);
+            var body = Encoding.UTF8.GetBytes(json);
+
+            _channel.BasicPublish(
+                exchange: "",
+                routingKey: _auditQueue,
+                basicProperties: null,
+                body: body
+            );
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao publicar evento de audit: {ex.Message}");
+        }
+    }
+
+    public void PublishAuditDeparted(AuditMessage message)
     {
         try
         {

@@ -11,7 +11,7 @@ using MobilityCore.Shared.Models;
 
 if (args.Length < 3)
 {
-    Console.WriteLine("Uso: MobilityCore.Application <vehicle_uuid> <vehicle_type> <latitude> <longitude> [towers_discovery_address]");
+    Console.WriteLine("Uso: MobilityCore.Application <vehicle_uuid> <vehicle_type> <latitude> <longitude> <velocity> [towers_discovery_address]");
     Console.WriteLine("vehicle_type: Ship ou Helicopter");
     Console.WriteLine("\nVariáveis de ambiente opcionais:");
     Console.WriteLine("  BASE_DNS - DNS base para concatenar com o Id da Torre (padrão: tower.svc.cluster.local)");
@@ -30,10 +30,11 @@ var vehicleType = typeStr.Equals("Helicopter", StringComparison.OrdinalIgnoreCas
 
 var lat = Convert.ToDouble(args[2]);
 var lon = Convert.ToDouble(args[3]);
-var towersDiscoveryAddress = args.Length > 4 ? args[4] : "towers-svc.tower.svc.cluster.local";
+var vel = Convert.ToDouble(args[4]);
+var towersDiscoveryAddress = args.Length > 5 ? args[5] : "towers-svc.tower.svc.cluster.local";
 
-Vehicle vehicle = new(vehicleType, lat, lon, uuid);
-Console.WriteLine($"Veículo criado: UUID={vehicle.Uuid}, Tipo={vehicle.Type}, Posição=({lat}, {lon})");
+Vehicle vehicle = new(vehicleType, lat, lon, vel, uuid);
+Console.WriteLine($"Veículo criado: UUID={vehicle.Uuid}, Tipo={vehicle.Type}, Posição=({lat}, {lon}), Velocidade={vel}");
 
 var httpClient = new HttpClient();
 var towerService = new TowerService(httpClient);
@@ -71,6 +72,10 @@ const int movementIntervalMs = 1000;
 const int metricsIntervalMs = 2000;
 
 var random = new Random();
+
+var currentSlotNumber = 0;
+var currentStructureUuid = "";
+var currentStructureType = "";
 
 while (true)
 {
@@ -141,20 +146,20 @@ while (true)
             Console.WriteLine($"Slot concedido! Movendo-se para {structureType} {structureUuid}...");
             vehicle.Status = StatusMovimento.InTransit;
 
-            if (rabbitMQService != null)
+            if (rabbitMQService != null && currentSlotNumber != 0)
             {
                 var departedEvent = new AuditMessage
                 {
                     VehicleType = vehicle.Type == VehicleType.Helicopter ? "helicopter" : "ship",
                     VehicleUuid = vehicle.Uuid,
-                    StructureType = structureType,
-                    StructureUuid = structureUuid,
+                    StructureType = currentStructureType,
+                    StructureUuid = currentStructureUuid,
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     Event = "departed",
-                    SlotNumber = slotNumber,
+                    SlotNumber = currentSlotNumber,
                     TowerId = selectedTower.TowerUuid
                 };
-                rabbitMQService.PublishAudit(departedEvent);
+                rabbitMQService.PublishAuditDeparted(departedEvent);
             }
 
             var destino = new GeoPoint(structure.Latitude, structure.Longitude);
@@ -186,6 +191,9 @@ while (true)
 
             if (rabbitMQService != null)
             {
+                currentSlotNumber = slotNumber;
+                currentStructureUuid = structureUuid;
+                currentStructureType = structureType;
                 var arrivedEvent = new AuditMessage
                 {
                     VehicleType = vehicle.Type == VehicleType.Helicopter ? "helicopter" : "ship",
@@ -197,7 +205,7 @@ while (true)
                     SlotNumber = slotNumber,
                     TowerId = selectedTower.TowerUuid
                 };
-                rabbitMQService.PublishAudit(arrivedEvent);
+                rabbitMQService.PublishAuditArrived(arrivedEvent);
             }
 
             Console.WriteLine("Aguardando no destino...");
