@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 4000,
-    allowedHosts: ['maritime-flow.souzavinicius.com.br'],
+    allowedHosts: ['maritime-flow.souzavinicius.com'],
   },
 })
