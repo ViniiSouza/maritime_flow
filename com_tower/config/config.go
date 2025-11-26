@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,15 +28,17 @@ type Config struct {
 
 	db       *pgxpool.Pool
 	rabbitmq *amqp.Channel
+	email    types.EmailConfig
 
 	uptime time.Time
 
-	maxLeaderFailures   int
-	propagationInterval time.Duration
-	heartbeatInterval   time.Duration
-	heartbeatTimeout    time.Duration
-	renewLockInterval   time.Duration
-	renewLockTimeout    time.Duration
+	maxLeaderFailures    int
+	maxStructureFailures int
+	propagationInterval  time.Duration
+	heartbeatInterval    time.Duration
+	heartbeatTimeout     time.Duration
+	renewLockInterval    time.Duration
+	renewLockTimeout     time.Duration
 }
 
 func (c *Config) GetId() types.UUID {
@@ -52,6 +55,10 @@ func (c *Config) GetDBPool() *pgxpool.Pool {
 
 func (c *Config) GetRabbitMQChannel() *amqp.Channel {
 	return c.rabbitmq
+}
+
+func (c *Config) GetEmailConfig() types.EmailConfig {
+	return c.email
 }
 
 func (c *Config) GetTowersQueue() string {
@@ -84,6 +91,10 @@ func (c *Config) GetUptimeSeconds() float64 {
 
 func (c *Config) GetMaxLeaderFailures() int {
 	return c.maxLeaderFailures
+}
+
+func (c *Config) GetMaxStructureFailures() int {
+	return c.maxStructureFailures
 }
 
 func (c *Config) GetPropagationInterval() time.Duration {
@@ -122,6 +133,7 @@ func InitConfig(ctx context.Context) {
 	}
 
 	channel := initRabbitMQ()
+	email := getEmailConfig()
 	towersQueue := os.Getenv(utils.TowersQueueEnv)
 	auditQueue := os.Getenv(utils.AuditQueueEnv)
 
@@ -130,6 +142,11 @@ func InitConfig(ctx context.Context) {
 	maxLeaderFailures, err := strconv.Atoi(os.Getenv(utils.MaxLeaderFailuresEnv))
 	if err != nil {
 		log.Fatalf("failed to parse max leader failures env: %v", err)
+	}
+
+	maxStructureFailures, err := strconv.Atoi(os.Getenv(utils.MaxStructureFailuresEnv))
+	if err != nil {
+		log.Fatalf("failed to parse max structure failures env: %v", err)
 	}
 
 	pinterval, err := strconv.Atoi(os.Getenv(utils.PropagationIntervalEnv))
@@ -168,19 +185,21 @@ func InitConfig(ctx context.Context) {
 	renewLockTimeout := time.Duration(ltimeout) * time.Second
 
 	Configuration = &Config{
-		id:                  types.UUID(id),
-		baseDns:             dns,
-		towersQueue:         towersQueue,
-		auditQueue:          auditQueue,
-		db:                  pool,
-		rabbitmq:            channel,
-		uptime:              time.Now(),
-		maxLeaderFailures:   maxLeaderFailures,
-		propagationInterval: propagationInterval,
-		heartbeatInterval:   heartbeatInterval,
-		heartbeatTimeout:    heartbeatTimeout,
-		renewLockInterval:   renewLockInterval,
-		renewLockTimeout:    renewLockTimeout,
+		id:                   types.UUID(id),
+		baseDns:              dns,
+		towersQueue:          towersQueue,
+		auditQueue:           auditQueue,
+		db:                   pool,
+		rabbitmq:             channel,
+		email:                email,
+		uptime:               time.Now(),
+		maxLeaderFailures:    maxLeaderFailures,
+		maxStructureFailures: maxStructureFailures,
+		propagationInterval:  propagationInterval,
+		heartbeatInterval:    heartbeatInterval,
+		heartbeatTimeout:     heartbeatTimeout,
+		renewLockInterval:    renewLockInterval,
+		renewLockTimeout:     renewLockTimeout,
 	}
 }
 
@@ -202,4 +221,14 @@ func initRabbitMQ() *amqp.Channel {
 func CloseRabbitMQ() {
 	Configuration.GetRabbitMQChannel().Close()
 	brokerconn.Close()
+}
+
+func getEmailConfig() types.EmailConfig {
+	return types.EmailConfig{
+		Host:       os.Getenv(utils.EmailHostEnv),
+		Port:       os.Getenv(utils.EmailPortEnv),
+		Username:   os.Getenv(utils.EmailUserEnv),
+		Password:   os.Getenv(utils.EmailPasswordEnv),
+		Recipients: strings.Split(os.Getenv(utils.EmailRecipientsEnv), ","),
+	}
 }

@@ -76,7 +76,7 @@ func (s service) AcquireSlot(ctx context.Context, request types.AcquireSlotReque
 
 	isSlotAvailable, err := s.repository.CheckSlotAvailability(ctx, slotUuid)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check slot %s availability: %w", slotUuid, err)
+		return nil, fmt.Errorf("failed to check slot %s availability: %w", slotUuid.String(), err)
 	}
 
 	if !isSlotAvailable {
@@ -86,7 +86,7 @@ func (s service) AcquireSlot(ctx context.Context, request types.AcquireSlotReque
 	}
 
 	if err := s.repository.AcquireSlot(ctx, request.VehicleUUID, slotUuid); err != nil {
-		return nil, fmt.Errorf("failed to acquire slot %s: %w", slotUuid, err)
+		return nil, fmt.Errorf("failed to acquire slot %s: %w", slotUuid.String(), err)
 	}
 
 	return &types.AcquireSlotResponse{
@@ -101,7 +101,7 @@ func (s service) ReleaseSlot(ctx context.Context, request types.ReleaseSlotLockR
 	}
 
 	if err := s.repository.ReleaseSlot(ctx, request.VehicleUUID, slotUuid); err != nil {
-		return fmt.Errorf("failed to acquire slot %s: %w", slotUuid, err)
+		return fmt.Errorf("failed to acquire slot %s: %w", slotUuid.String(), err)
 	}
 
 	return nil 

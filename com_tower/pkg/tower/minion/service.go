@@ -3,9 +3,14 @@ package minion
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
+	"time"
 
+	"github.com/ViniiSouza/maritime_flow/com_tower/config"
 	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/types"
+	"github.com/ViniiSouza/maritime_flow/com_tower/pkg/utils"
 )
 
 type service struct {
@@ -36,10 +41,32 @@ func (s service) SyncStructures(structures types.Structures) {
 	s.repository.SyncStructures(structures)
 }
 
-func (s service) CheckSlotAvailability(ctx context.Context, request types.SlotRequest) (*types.SlotResponse, error) {
-	result, err := s.integration.RequestSlotToStructure(ctx, request)
-	if err != nil {
-		return nil, err
+func (s service) CheckSlotAvailability(ctx context.Context, request types.SlotRequest) (result *types.SlotResponse, err error) {
+	failureCount := 0
+	
+	for (failureCount < config.Configuration.GetMaxStructureFailures()) {
+		result, err = s.integration.RequestSlotToStructure(ctx, request)
+		if err != nil {
+			if errors.Is(err, utils.ErrStructureUnreachable) {
+				failureCount++
+				time.Sleep(500 * time.Millisecond)
+				continue
+			}
+			return nil, err
+		}
+
+		break
+	}
+
+	if failureCount == config.Configuration.GetMaxStructureFailures() {
+		log.Printf("failed to request slot to %s %s: %v", request.StructureType, request.StructureUUID.String(), err)
+		if err := s.integration.SendEmail(request.StructureType, request.StructureUUID); err != nil {
+			return nil, fmt.Errorf("failed to send email about structure failure: %w", err)
+		}
+
+		return &types.SlotResponse{
+			State: types.InUseSlotState,
+		}, nil
 	}
 
 	if result.State == types.FreeSlotState {
@@ -51,7 +78,13 @@ func (s service) CheckSlotAvailability(ctx context.Context, request types.SlotRe
 
 		acquireResult, err := s.integration.AcquireSlotLockInTowerLeader(ctx, acquireRequest)
 		if err != nil {
-			return nil, err
+			log.Printf("failed to request slot to tower leader: %v", err)
+			
+			// rollback slot request in structure
+			releaseSlotReq := types.ReleaseSlotRequest{SlotNumber: request.SlotNumber, SlotType: request.SlotType}
+			if err := s.integration.ReleaseSlot(ctx, request.StructureUUID, request.StructureType, releaseSlotReq); err != nil {
+				return nil, fmt.Errorf("failed to rollback slot request in %s %s: %w", request.StructureType, request.StructureUUID.String(), err)
+			}
 		}
 
 		if acquireResult.Result == types.UnavailableAcquireSlotResultType {

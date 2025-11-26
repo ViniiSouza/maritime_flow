@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	listStructuresQuery = "SELECT st.id, st.latitude, st.longitude, jsonb_build_object('docks_qtt', COUNT(*) FILTER (WHERE sl.type = 'Dock'), 'helipads_qtt', COUNT(*) FILTER (WHERE sl.type = 'Helipad')) AS slots FROM structures st LEFT JOIN slots sl ON st.id = sl.structure_id WHERE st.type = $1 GROUP BY st.id;"
+	listStructuresQuery = "SELECT st.id, st.latitude, st.longitude, jsonb_build_object('docks_qtt', COUNT(*) FILTER (WHERE sl.type = 'dock'), 'helipads_qtt', COUNT(*) FILTER (WHERE sl.type = 'helipad')) AS slots FROM structures st LEFT JOIN slots sl ON st.id = sl.structure_id WHERE st.type = $1 GROUP BY st.id;"
 )
 
 type repository struct {
@@ -72,7 +72,7 @@ func (r repository) GetSlotUUID(ctx context.Context, structureUuid types.UUID, s
 }
 
 func (r repository) CheckSlotAvailability(ctx context.Context, slotUuid types.UUID) (isAvailable bool, err error) {
-	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_uuid = $1);", slotUuid.String()).Scan(&isAvailable)
+	err = r.DB.QueryRow(ctx, "SELECT NOT EXISTS (SELECT 1 FROM vehicles WHERE current_slot_id = $1);", slotUuid.String()).Scan(&isAvailable)
 	return
 }
 
@@ -103,13 +103,22 @@ func (r repository) ReleaseSlot(ctx context.Context, vehicleUuid types.UUID, slo
 }
 
 func (r repository) AcquireLock(ctx context.Context) error {
-	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id = $1 OR leader_id IS NULL OR renewed_at < (NOW() - ($2 || ' seconds')::interval);;", config.Configuration.GetIdAsString(), strconv.Itoa(int(config.Configuration.GetRenewLockTimeout().Seconds())))
+	tag, err := r.DB.Exec(ctx, "UPDATE tower_lock SET leader_id = $1, renewed_at = NOW() WHERE leader_id = $1 OR leader_id IS NULL OR renewed_at < (NOW() - ($2 || ' seconds')::interval);", config.Configuration.GetIdAsString(), strconv.Itoa(int(config.Configuration.GetRenewLockTimeout().Seconds())))
 	if err != nil {
 		return err
 	}
 
 	if tag.RowsAffected() == 0 {
 		return errors.New("no rows affected, lock was not acquired")
+	}
+
+	tag, err = r.DB.Exec(ctx, "UPDATE towers SET is_leader = (id = $1);", config.Configuration.GetIdAsString())
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return errors.New("failed to set other towers as non leaders")
 	}
 
 	return nil
