@@ -38,8 +38,6 @@ class AuditManager:
         self.username = os.getenv('RABBITMQ_USERNAME')
         self.password = os.getenv('RABBITMQ_PASSWORD')
         self.queue = os.getenv('RABBITMQ_AUDIT_QUEUE')
-        self.rabbitmq_exchange = os.getenv('RABBITMQ_EXCHANGE')
-        self.rabbitmq_routing_key = os.getenv('RABBITMQ_ROUTING_KEY')
         
         # Configurações OpenSearch
         self.opensearch_host = os.getenv('OPENSEARCH_HOST')
