@@ -58,7 +58,7 @@ func AuditRequests() gin.HandlerFunc {
 			VehicleUUID:   slotReq.VehicleUUID,
 			StructureType: slotReq.StructureType,
 			StructureUUID: slotReq.StructureUUID,
-			Timestamp:     time.Now(),
+			Timestamp:     int(time.Now().Unix()),
 			Result:        result,
 			SlotNumber:    slotReq.SlotNumber,
 		}

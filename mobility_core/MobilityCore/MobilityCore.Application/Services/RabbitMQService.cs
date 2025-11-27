@@ -12,11 +12,15 @@ public class RabbitMQService : IDisposable
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly string _metricsQueue;
     private readonly string _auditQueue;
+    private readonly string _towersQueue;
+    private readonly string _eventsExchange;
 
-    public RabbitMQService(string host, int port, string username, string password, string metricsQueue = "metrics", string auditQueue = "audit")
+    public RabbitMQService(string host, int port, string username, string password, string metricsQueue = "metrics", string auditQueue = "audit", string towersQueue = "towers", string eventsExchange = "events")
     {
         _metricsQueue = metricsQueue;
         _auditQueue = auditQueue;
+        _towersQueue = towersQueue;
+        _eventsExchange = eventsExchange;
         
         _jsonOptions = new JsonSerializerOptions
         {
@@ -40,6 +44,18 @@ public class RabbitMQService : IDisposable
 
         _channel.QueueDeclare(queue: _metricsQueue, durable: false, exclusive: false, autoDelete: false, arguments: null);
         _channel.QueueDeclare(queue: _auditQueue, durable: false, exclusive: false, autoDelete: false, arguments: null);
+        _channel.QueueDeclare(queue: _towersQueue, durable: false, exclusive: false, autoDelete: false, arguments: null);
+
+        _channel.ExchangeDeclare(
+            exchange: _eventsExchange,
+            type: ExchangeType.Fanout,
+            durable: false,
+            autoDelete: false,
+            arguments: null
+        );
+
+        _channel.QueueBind(queue: _auditQueue, exchange: _eventsExchange, routingKey: string.Empty);
+        _channel.QueueBind(queue: _towersQueue, exchange: _eventsExchange, routingKey: string.Empty);
     }
 
     public void PublishMetrics(MetricsMessage message)
@@ -63,7 +79,7 @@ public class RabbitMQService : IDisposable
         }
     }
 
-    public void PublishAudit(AuditMessage message)
+    public void PublishAuditArrived(AuditMessage message)
     {
         try
         {
@@ -73,6 +89,27 @@ public class RabbitMQService : IDisposable
             _channel.BasicPublish(
                 exchange: "",
                 routingKey: _auditQueue,
+                basicProperties: null,
+                body: body
+            );
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao publicar evento de audit: {ex.Message}");
+        }
+    }
+
+    public void PublishAuditDeparted(AuditMessage message)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(message, _jsonOptions);
+            var body = Encoding.UTF8.GetBytes(json);
+
+            _channel.BasicPublish(
+                exchange: _eventsExchange,
+                routingKey: "",
                 basicProperties: null,
                 body: body
             );

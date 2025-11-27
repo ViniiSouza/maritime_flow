@@ -1,9 +1,5 @@
 package types
 
-import (
-	"time"
-)
-
 type VehicleType string
 type EventType string
 
@@ -18,12 +14,12 @@ const (
 )
 
 type VehicleEventMessage struct {
-	VehicleType   VehicleType             `json:"vehicle_type"`
-	VehicleUUID   UUID              `json:"vehicle_uuid"`
+	VehicleType   VehicleType   `json:"vehicle_type"`
+	VehicleUUID   UUID          `json:"vehicle_uuid"`
 	StructureType StructureType `json:"structure_type"`
-	StructureUUID UUID              `json:"structure_uuid"`
-	Timestamp     time.Time               `json:"timestamp"`
-	Event         EventType               `json:"event"`
-	SlotNumber    int                     `json:"slot_number"`
-	TowerUUID     UUID              `json:"tower_id"`
+	StructureUUID UUID          `json:"structure_uuid"`
+	Timestamp     int           `json:"timestamp"`
+	Event         EventType     `json:"event"`
+	SlotNumber    int           `json:"slot_number"`
+	TowerUUID     UUID          `json:"tower_id"`
 }

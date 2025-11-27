@@ -96,7 +96,9 @@ func consumeBroker(ctx context.Context, svc service) {
 		select {
 		case msg := <-slotReleaseCh:
 			log.Printf("[minion][consumer] received message: %s", string(msg.Body))
-			svc.ReleaseSlot(ctx, msg.Body)
+			if err := svc.ReleaseSlot(ctx, msg.Body); err != nil {
+				log.Printf("[minion][consumer] failed to release slot: %v", err)
+			}
 
 		case <-ctx.Done():
 			log.Printf("[minion][consumer] interrupting consumer...")
