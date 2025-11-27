@@ -7,7 +7,26 @@ const router = Router();
 router.get('/', async (_req, res, next) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, name, type, latitude, longitude FROM structures ORDER BY id ASC'
+      `SELECT s.id,
+              s.name,
+              s.type,
+              s.latitude,
+              s.longitude,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'id', sl.id,
+                    'structure_id', sl.structure_id,
+                    'number', sl.number,
+                    'type', sl.type
+                  )
+                ) FILTER (WHERE sl.id IS NOT NULL),
+                '[]'
+              ) AS slots
+       FROM structures s
+       LEFT JOIN slots sl ON sl.structure_id = s.id
+       GROUP BY s.id
+       ORDER BY s.id ASC`
     );
     res.json(rows);
   } catch (error) {
@@ -19,7 +38,26 @@ router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
     const { rows } = await pool.query(
-      'SELECT id, name, type, latitude, longitude FROM structures WHERE id = $1',
+      `SELECT s.id,
+              s.name,
+              s.type,
+              s.latitude,
+              s.longitude,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'id', sl.id,
+                    'structure_id', sl.structure_id,
+                    'number', sl.number,
+                    'type', sl.type
+                  )
+                ) FILTER (WHERE sl.id IS NOT NULL),
+                '[]'
+              ) AS slots
+       FROM structures s
+       LEFT JOIN slots sl ON sl.structure_id = s.id
+       WHERE s.id = $1
+       GROUP BY s.id`,
       [id]
     );
     if (!rows.length) {

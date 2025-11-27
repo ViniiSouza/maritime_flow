@@ -97,6 +97,47 @@ function EntityIcon({ src, alt, size = 24 }) {
   );
 }
 
+function SlotDots({ slots = [], color = '#5b21b6' }) {
+  if (!slots.length) return null;
+  const ordered = [...slots].sort((a, b) => a.number - b.number);
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: -18,
+        left: '50%',
+        display: 'flex',
+        gap: '8px',
+        transform: 'translateX(-50%)',
+      }}
+    >
+      {ordered.map((slot) => {
+        const label = slot.type === 'helipad' ? 'H' : slot.type === 'dock' ? 'D' : '?';
+        return (
+          <div
+            key={slot.id}
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: color,
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 10,
+              fontWeight: 700,
+            }}
+            title={slot.type}
+          >
+            {label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // InfoPopup
 function InfoPopup({ item, onConfirm, onCancel }) {
   const canDelete = DELETABLE_TYPES.includes(item?.typeLabel);
@@ -363,14 +404,17 @@ function HomePage({ towers, vehicles, structures, onDeleteTower }) {
         {/* Plataformas à esquerda */}
         <div className="grid gap-6 items-center justify-center" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
           {platforms.map((p) => (
-            <motion.div
-              key={p.id}
-              whileHover={{ scale: 1.1 }}
-              onClick={(e) => showInfo({ ...p, typeLabel: 'Plataforma' }, e)}
-              className="w-16 h-16 bg-purple-500 text-white text-xl font-bold flex items-center justify-center rounded-full cursor-pointer shadow-lg mx-auto"
-            >
-              <EntityIcon src={platformIcon} alt="Platform icon" size={28} />
-            </motion.div>
+            <div key={p.id} style={{ position: 'relative', width: 64, height: 64 }}>
+              <SlotDots slots={p.slots} color="#5b21b6" />
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                onClick={(e) => showInfo({ ...p, typeLabel: 'Plataforma' }, e)}
+                className="w-16 h-16 bg-purple-500 text-white text-xl font-bold flex items-center justify-center rounded-full cursor-pointer shadow-lg mx-auto"
+                style={{ position: 'absolute', inset: 0 }}
+              >
+                <EntityIcon src={platformIcon} alt="Platform icon" size={28} />
+              </motion.div>
+            </div>
           ))}
         </div>
 
@@ -451,14 +495,17 @@ function HomePage({ towers, vehicles, structures, onDeleteTower }) {
         {/* Centrais à direita */}
         <div className="grid gap-6 items-center justify-center" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
           {centrals.map((c) => (
-            <motion.div
-              key={c.id}
-              whileHover={{ scale: 1.1 }}
-              onClick={(e) => showInfo({ ...c, typeLabel: 'Central' }, e)}
-              className="w-16 h-16 bg-orange-500 text-white text-xl font-bold flex items-center justify-center rounded-full cursor-pointer shadow-lg mx-auto"
-            >
-              <EntityIcon src={centralIcon} alt="Central icon" size={28} />
-            </motion.div>
+            <div key={c.id} style={{ position: 'relative', width: 64, height: 64 }}>
+              <SlotDots slots={c.slots} color="#ea580c" />
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                onClick={(e) => showInfo({ ...c, typeLabel: 'Central' }, e)}
+                className="w-16 h-16 bg-orange-500 text-white text-xl font-bold flex items-center justify-center rounded-full cursor-pointer shadow-lg mx-auto"
+                style={{ position: 'absolute', inset: 0 }}
+              >
+                <EntityIcon src={centralIcon} alt="Central icon" size={28} />
+              </motion.div>
+            </div>
           ))}
         </div>
       </div>
@@ -486,7 +533,7 @@ function HomePage({ towers, vehicles, structures, onDeleteTower }) {
       </div>
 
       {/* Legenda */}
-      <div className="absolute bottom-4 right-4 text-sm bg-gray-800 text-white p-4 rounded-lg shadow-md opacity-90 z-40 flex flex-col gap-3">
+      <div className="absolute bottom-4 right-4 text-sm bg-white text-black p-4 rounded-lg border border-gray-300 shadow-md z-40 flex flex-col gap-3">
         {[
           { label: 'Helicóptero', icon: helicopterIcon },
           { label: 'Navio', icon: shipIcon },
