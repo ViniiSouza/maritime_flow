@@ -239,7 +239,7 @@ static MetricsMessage GenerateMetrics(Vehicle vehicle, Random random)
     // Memória em bytes (simula entre 2MB e 8MB)
     var memUsageBytes = (long)(2_000_000 + (random.NextDouble() * 6_000_000));
 
-    return new MetricsMessage
+    var metrics = new Metrics
     {
         Latitude = vehicle.Position.Latitude,
         Longitude = vehicle.Position.Longitude,
@@ -248,5 +248,17 @@ static MetricsMessage GenerateMetrics(Vehicle vehicle, Random random)
         CpuUsage = cpuUsage,
         MemUsage = memUsage,
         MemUsageBytes = memUsageBytes
+    };
+
+    var metadata = new Metadata
+    {
+        VehicleUuid = vehicle.Uuid,
+        VehicleType = vehicle.Type == VehicleType.Helicopter ? "helicopter" : "ship"
+    };
+
+    return new MetricsMessage
+    {
+        Metadata = metadata,
+        Metrics = metrics
     };
 }
