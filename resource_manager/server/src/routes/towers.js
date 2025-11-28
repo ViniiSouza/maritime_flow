@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
+import { commitManifest, deleteResource } from '../gitops.js';
 
 const router = Router();
 
@@ -32,12 +33,12 @@ router.get('/:id', async (req, res, next) => {
 });
 
 router.post('/', async (req, res, next) => {
+  let id = randomUUID();
   try {
     const { name, latitude, longitude, is_leader = false } = req.body;
     if (!name || latitude === undefined || longitude === undefined) {
       return res.status(400).json({ message: 'name, latitude and longitude are required' });
     }
-    const id = randomUUID();
     const { rows } = await pool.query(
       `INSERT INTO towers (id, name, latitude, longitude, is_leader)
        VALUES ($1, $2, $3, $4, $5)
@@ -48,11 +49,22 @@ router.post('/', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+
+  commitManifest({
+    directory: `com-tower/towers/${id}`,
+    files: {
+      "com-tower/deployment.yaml.tpl": `com-tower/towers/${id}/deployment.yaml`,
+      "com-tower/svc.yaml.tpl": `com-tower/towers/${id}/svc.yaml`,
+    },
+    replacements: {
+      TID: id,
+    }
+  }).catch(console.error);
 });
 
 router.delete('/:id', async (req, res, next) => {
+  let { id } = req.params;
   try {
-    const { id } = req.params;
     const { rowCount } = await pool.query('DELETE FROM towers WHERE id = $1', [id]);
     if (!rowCount) {
       return res.status(404).json({ message: 'Tower not found' });
@@ -61,6 +73,8 @@ router.delete('/:id', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+
+  deleteResource(`com-tower/towers/${id}`).catch(console.error);
 });
 
 export default router;

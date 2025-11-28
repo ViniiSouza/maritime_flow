@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
+import { commitManifest } from '../gitops.js';
 
 const router = Router();
 
@@ -71,15 +72,15 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   let client;
+  let structureId = randomUUID();
+  let { name, type, latitude, longitude } = req.body;
   try {
     client = await pool.connect();
-    const { name, type, latitude, longitude } = req.body;
     if (!name || !type || latitude === undefined || longitude === undefined) {
       return res
         .status(400)
         .json({ message: 'name, type, latitude and longitude are required' });
     }
-    const structureId = randomUUID();
     const dockSlotId = randomUUID();
     const helipadSlotId = randomUUID();
 
@@ -113,6 +114,20 @@ router.post('/', async (req, res, next) => {
       client.release();
     }
   }
+
+  const directoryType = (type.toLowerCase() == 'platform' ? 'platforms' : 'centrals');
+
+  commitManifest({
+    directory: `station-core/${directoryType}/${structureId}`,
+    files: {
+      "station-core/deployment.yaml.tpl": `station-core/${directoryType}/${structureId}/deployment.yaml`,
+      "station-core/svc.yaml.tpl": `station-core/${directoryType}/${structureId}/svc.yaml`,
+    },
+    replacements: {
+      SID: structureId,
+      STYPE: type.toLowerCase(),
+    }
+  }).catch(console.error);
 });
 
 export default router;
