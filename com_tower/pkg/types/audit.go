@@ -16,4 +16,5 @@ type AuditRequest struct {
 	Timestamp     int           `json:"timestamp"`
 	Result        ResultType    `json:"result"`
 	SlotNumber    int           `json:"slot_number"`
+	TowerUUID     UUID          `json:"tower_id"`
 }

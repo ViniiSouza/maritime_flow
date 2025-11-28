@@ -61,6 +61,7 @@ func AuditRequests() gin.HandlerFunc {
 			Timestamp:     int(time.Now().Unix()),
 			Result:        result,
 			SlotNumber:    slotReq.SlotNumber,
+			TowerUUID:     config.Configuration.GetId(),
 		}
 
 		body, err := json.Marshal(auditReq)
