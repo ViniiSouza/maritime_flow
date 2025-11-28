@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
-import { commitManifest } from '../gitops.js';
+import { commitManifest, deleteResource } from '../gitops.js';
 
 const router = Router();
 
@@ -132,19 +132,22 @@ router.post('/', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   let client;
+  let { id } = req.params;
+  let type;
   try {
-    const { id } = req.params;
     client = await pool.connect();
     await client.query('BEGIN');
 
-    const { rowCount: structureExists } = await client.query(
-      'SELECT 1 FROM structures WHERE id = $1',
+    const { rows } = await client.query(
+      'SELECT type FROM structures WHERE id = $1',
       [id]
     );
-    if (!structureExists) {
+    if (!rows.length) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'Structure not found' });
     }
+
+    type = rows[0].type;
 
     await client.query('DELETE FROM slots WHERE structure_id = $1', [id]);
     await client.query('DELETE FROM structures WHERE id = $1', [id]);
@@ -161,6 +164,9 @@ router.delete('/:id', async (req, res, next) => {
       client.release();
     }
   }
+
+  const directoryType = (type.toLowerCase() == 'platform' ? 'platforms' : 'centrals');
+  deleteResource(`station-core/${directoryType}/${id}`).catch(console.error);
 });
 
 export default router;
