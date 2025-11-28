@@ -97,7 +97,7 @@ router.post('/', async (req, res, next) => {
        VALUES ($1, $2, $3, $4),
               ($5, $2, $6, $7)
        RETURNING id, structure_id, number, type`,
-      [dockSlotId, structureId, 1, 'dock', helipadSlotId, 2, 'helipad']
+      [dockSlotId, structureId, 1, 'dock', helipadSlotId, 1, 'helipad']
     );
 
     await client.query('COMMIT');
