@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
-import { commitManifest } from '../gitops.js';
+import { commitManifest, deleteResource } from '../gitops.js';
 
 const router = Router();
 
@@ -70,16 +70,23 @@ router.post('/', async (req, res, next) => {
 });
 
 router.delete('/:id', async (req, res, next) => {
+  let { id } = req.params;
+  let type;
   try {
-    const { id } = req.params;
-    const { rowCount } = await pool.query('DELETE FROM vehicles WHERE id = $1', [id]);
-    if (!rowCount) {
+    const { rows } = await pool.query('SELECT type FROM vehicles WHERE id = $1', [id]);
+    if (!rows.length) {
       return res.status(404).json({ message: 'Vehicle not found' });
     }
+
+    type = rows[0].type;
+    const { rowCount } = await pool.query('DELETE FROM vehicles WHERE id = $1', [id]);
     res.status(204).send();
   } catch (error) {
     next(error);
   }
+
+  const directoryType = (type.toLowerCase() == 'helicopter' ? 'helicopters' : 'ships');
+  deleteResource(`mobility-core/${directoryType}/${id}`).catch(console.error);
 });
 
 export default router;
