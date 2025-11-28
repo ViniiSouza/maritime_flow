@@ -27,7 +27,7 @@ func StartElection(towers []types.Tower) {
             continue
         }
 
-        url := fmt.Sprintf("%s.tower.%s/election", tower.UUID.String(), config.Configuration.GetBaseDns())
+        url := fmt.Sprintf("http://t-%s.tower.%s/election", tower.UUID.String(), config.Configuration.GetBaseDns())
         payload, err := json.Marshal(electionReq)
 		if err != nil {
 			log.Printf("[minion][election] failed to marshal election request: %v", err)
@@ -36,7 +36,7 @@ func StartElection(towers []types.Tower) {
         
         resp, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
         if err != nil {
-            log.Printf("[minion][election] failed to send election request to tower %s: %v", tower.UUID, err)
+            log.Printf("[minion][election] failed to send election request to tower %s: %v", tower.UUID.String(), err)
             continue
         }
 
@@ -44,12 +44,12 @@ func StartElection(towers []types.Tower) {
 
         var electionResp types.ElectionResponse
         if err := json.NewDecoder(resp.Body).Decode(&electionResp); err != nil {
-            log.Printf("[minion][election] failed to decode response from tower %s: %v", tower.UUID, err)
+            log.Printf("[minion][election] failed to decode response from tower %s: %v", tower.UUID.String(), err)
             continue
         }
 
         if resp.StatusCode == http.StatusOK && electionResp.HasHigherUptime {
-            log.Printf("[minion][election] tower %s has a higher uptime of (%.2fs): stopping election", tower.UUID, electionResp.Uptime)
+            log.Printf("[minion][election] tower %s has a higher uptime of (%.2fs): stopping election", tower.UUID.String(), electionResp.Uptime)
             hasHighestUptime = false
             break
         }
@@ -82,14 +82,14 @@ func broadcastCoordinator(towers []types.Tower) {
             continue
         }
 
-        url := fmt.Sprintf("%s.tower.%s/leader", tower.UUID.String(), config.Configuration.GetBaseDns())
+        url := fmt.Sprintf("http://t-%s.tower.%s/leader", tower.UUID.String(), config.Configuration.GetBaseDns())
         resp, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
         if err != nil {
-            log.Printf("[leader][election] failed to announce new leader to tower %s: %v", tower.UUID, err)
+            log.Printf("[leader][election] failed to announce new leader to tower %s: %v", tower.UUID.String(), err)
             continue
         }
 
         resp.Body.Close()
-        log.Printf("[leader][election] announced new leader to tower %s.", tower.UUID)
+        log.Printf("[leader][election] announced new leader to tower %s.", tower.UUID.String())
     }
 }

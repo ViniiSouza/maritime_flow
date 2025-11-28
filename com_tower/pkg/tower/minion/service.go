@@ -85,6 +85,10 @@ func (s service) CheckSlotAvailability(ctx context.Context, request types.SlotRe
 			if err := s.integration.ReleaseSlot(ctx, request.StructureUUID, request.StructureType, releaseSlotReq); err != nil {
 				return nil, fmt.Errorf("failed to rollback slot request in %s %s: %w", request.StructureType, request.StructureUUID.String(), err)
 			}
+
+			return &types.SlotResponse{
+				State: types.InUseSlotState,
+			}, nil
 		}
 
 		if acquireResult.Result == types.UnavailableAcquireSlotResultType {
