@@ -24,7 +24,7 @@ async function fetchJson(path, options = {}) {
   return response.json();
 }
 
-const DELETABLE_TYPES = ['Torre', 'Tower Leader'];
+const DELETABLE_TYPES = ['Torre', 'Tower Leader', 'Plataforma', 'Central', 'Helicóptero', 'Navio'];
 
 const formCardStyle = {
   display: 'flex',
@@ -329,7 +329,7 @@ function AddVehiclePage({ onAdd }) {
 }
 
 
-function HomePage({ towers, vehicles, structures, onDeleteTower }) {
+function HomePage({ towers, vehicles, structures, onDeleteTower, onDeleteStructure, onDeleteVehicle }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const navigate = useNavigate();
@@ -372,15 +372,38 @@ function HomePage({ towers, vehicles, structures, onDeleteTower }) {
     setSelectedItem(item);
   };
 
+  const deleteActions = {
+    Torre: onDeleteTower,
+    'Tower Leader': onDeleteTower,
+    Plataforma: onDeleteStructure,
+    Central: onDeleteStructure,
+    Helicóptero: onDeleteVehicle,
+    Navio: onDeleteVehicle,
+  };
+
+  const deleteErrorMessages = {
+    Torre: 'Falha ao excluir torre.',
+    'Tower Leader': 'Falha ao excluir torre.',
+    Plataforma: 'Falha ao excluir plataforma.',
+    Central: 'Falha ao excluir central.',
+    Helicóptero: 'Falha ao excluir helicóptero.',
+    Navio: 'Falha ao excluir navio.',
+  };
+
   const handleDelete = async () => {
-    if (!selectedItem || !DELETABLE_TYPES.includes(selectedItem.typeLabel)) {
+    if (!selectedItem) {
+      setSelectedItem(null);
+      return;
+    }
+    const deleteAction = deleteActions[selectedItem.typeLabel];
+    if (!deleteAction) {
       setSelectedItem(null);
       return;
     }
     try {
-      await onDeleteTower(selectedItem.id);
+      await deleteAction(selectedItem.id);
     } catch (err) {
-      alert('Falha ao excluir torre.');
+      alert(deleteErrorMessages[selectedItem.typeLabel] || 'Falha ao excluir item.');
       console.error(err);
     } finally {
       setSelectedItem(null);
@@ -630,6 +653,16 @@ export default function App() {
     setTowers((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const deleteVehicle = async (id) => {
+    await fetchJson(`/api/vehicles/${id}`, { method: 'DELETE' });
+    setVehicles((prev) => prev.filter((v) => v.id !== id));
+  };
+
+  const deleteStructure = async (id) => {
+    await fetchJson(`/api/structures/${id}`, { method: 'DELETE' });
+    setStructures((prev) => prev.filter((s) => s.id !== id));
+  };
+
   const appWrapperStyle = {
     minHeight: '100vh',
     backgroundColor: '#ffffff',
@@ -657,16 +690,18 @@ export default function App() {
                 path="/"
                 element={
                   <HomePage
-                    towers={towers}
-                    vehicles={vehicles}
-                    structures={structures}
-                    setTowers={setTowers}
-                    setVehicles={setVehicles}
-                    setStructures={setStructures}
-                    onDeleteTower={deleteTower}
-                  />
-                }
-              />
+                  towers={towers}
+                  vehicles={vehicles}
+                  structures={structures}
+                  setTowers={setTowers}
+                  setVehicles={setVehicles}
+                  setStructures={setStructures}
+                  onDeleteTower={deleteTower}
+                  onDeleteStructure={deleteStructure}
+                  onDeleteVehicle={deleteVehicle}
+                />
+              }
+            />
               <Route
                 path="/add-tower"
                 element={<AddTowerPage onAdd={addTower} />}

@@ -130,4 +130,37 @@ router.post('/', async (req, res, next) => {
   }).catch(console.error);
 });
 
+router.delete('/:id', async (req, res, next) => {
+  let client;
+  try {
+    const { id } = req.params;
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const { rowCount: structureExists } = await client.query(
+      'SELECT 1 FROM structures WHERE id = $1',
+      [id]
+    );
+    if (!structureExists) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Structure not found' });
+    }
+
+    await client.query('DELETE FROM slots WHERE structure_id = $1', [id]);
+    await client.query('DELETE FROM structures WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
+    res.status(204).send();
+  } catch (error) {
+    if (client) {
+      await client.query('ROLLBACK');
+    }
+    next(error);
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
+
 export default router;
