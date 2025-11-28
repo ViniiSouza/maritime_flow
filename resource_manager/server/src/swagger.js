@@ -188,6 +188,17 @@ const swaggerDefinition = {
           },
         },
       },
+      delete: {
+        summary: 'Remover veiculo',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          204: { description: 'Removido' },
+          404: {
+            description: 'Nao encontrado',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+          },
+        },
+      },
     },
     '/api/structures': {
       get: {
@@ -243,6 +254,17 @@ const swaggerDefinition = {
             description: 'Estrutura encontrada',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/Structure' } } },
           },
+          404: {
+            description: 'Nao encontrada',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+          },
+        },
+      },
+      delete: {
+        summary: 'Remover estrutura',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          204: { description: 'Removida' },
           404: {
             description: 'Nao encontrada',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
