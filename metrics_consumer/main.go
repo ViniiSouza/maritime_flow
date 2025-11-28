@@ -16,6 +16,15 @@ import (
 
 type VehicleType string
 
+func (v *VehicleType) UnmarshalJson(b []byte) error {
+	*v = VehicleType(string(b))
+	return nil
+}
+
+func (v VehicleType) MarshalJson() ([]byte, error) {
+	return []byte(string(v)), nil
+}
+
 const (
 	metricsNamespace = "vehicles_monitoring"
 
@@ -35,7 +44,7 @@ var (
 			Help:      "latitude coordinate of vehicle",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 
 	longitudeMetric = prometheus.NewGaugeVec(
@@ -44,7 +53,7 @@ var (
 			Help:      "longitude coordinate of vehicle",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 
 	motorTemperatureMetric = prometheus.NewGaugeVec(
@@ -53,7 +62,7 @@ var (
 			Help:      "temperature of vehicle motor",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 
 	fuelLevelMetric = prometheus.NewGaugeVec(
@@ -62,7 +71,7 @@ var (
 			Help:      "vehicle fuel level in ratio",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 
 	cpuUsagePorcMetric = prometheus.NewGaugeVec(
@@ -71,7 +80,7 @@ var (
 			Help:      "cpu usage of vehicle system in ratio",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 
 	memUsagePorcMetric = prometheus.NewGaugeVec(
@@ -80,7 +89,7 @@ var (
 			Help:      "memory usage of vehicle system in ratio",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 
 	memUsageBytesMetric = prometheus.NewGaugeVec(
@@ -89,12 +98,12 @@ var (
 			Help:      "memory usage of vehicle system in bytes",
 			Namespace: metricsNamespace,
 		},
-		[]string{vehicleTypeLabel},
+		[]string{},
 	)
 )
 
 type Metadata struct {
-	Name        string      `json:"name"`
+	UUID        string      `json:"vehicle_uuid"`
 	VehicleType VehicleType `json:"vehicle_type"`
 }
 
@@ -104,11 +113,11 @@ type Coordinates struct {
 }
 
 type Metrics struct {
-	Coordinates      Coordinates `json:"coordinates"`
-	MotorTemperature float64     `json:"motor_temperature"`
+	Coordinates
+	MotorTemperature float64     `json:"temperature"`
 	FuelLevel        float64     `json:"fuel_level"`
-	CPUUsagePorc     float64     `json:"cpu_usage_porc"`
-	MemUsagePorc     float64     `json:"mem_usage_porc"`
+	CPUUsagePorc     float64     `json:"cpu_usage"`
+	MemUsagePorc     float64     `json:"mem_usage"`
 	MemUsageBytes    int         `json:"mem_usage_bytes"`
 }
 
@@ -203,16 +212,16 @@ func sendMetrics(data []byte) {
 		return
 	}
 
-	pusher = pusher.Grouping("vehicle_name", msg.Metadata.Name)
-	vehicleType := string(msg.Metadata.VehicleType)
+	pusher = pusher.Grouping("vehicle_uuid", msg.Metadata.UUID)
+	pusher = pusher.Grouping("vehicle_type", string(msg.Metadata.VehicleType))
 
-	latitudeMetric.WithLabelValues(vehicleType).Set(msg.Metrics.Coordinates.Latitude)
-	longitudeMetric.WithLabelValues(vehicleType).Set(msg.Metrics.Coordinates.Longitude)
-	motorTemperatureMetric.WithLabelValues(vehicleType).Set(msg.Metrics.MotorTemperature)
-	fuelLevelMetric.WithLabelValues(vehicleType).Set(msg.Metrics.FuelLevel)
-	cpuUsagePorcMetric.WithLabelValues(vehicleType).Set(msg.Metrics.CPUUsagePorc)
-	memUsagePorcMetric.WithLabelValues(vehicleType).Set(msg.Metrics.MemUsagePorc)
-	memUsageBytesMetric.WithLabelValues(vehicleType).Set(float64(msg.Metrics.MemUsageBytes))
+	latitudeMetric.WithLabelValues().Set(msg.Metrics.Coordinates.Latitude)
+	longitudeMetric.WithLabelValues().Set(msg.Metrics.Coordinates.Longitude)
+	motorTemperatureMetric.WithLabelValues().Set(msg.Metrics.MotorTemperature)
+	fuelLevelMetric.WithLabelValues().Set(msg.Metrics.FuelLevel)
+	cpuUsagePorcMetric.WithLabelValues().Set(msg.Metrics.CPUUsagePorc)
+	memUsagePorcMetric.WithLabelValues().Set(msg.Metrics.MemUsagePorc)
+	memUsageBytesMetric.WithLabelValues().Set(float64(msg.Metrics.MemUsageBytes))
 
 	if err := pusher.Add(); err != nil {
 		log.Printf("failed to push metrics: %v", err)
