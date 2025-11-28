@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import pool from '../db.js';
+import { commitManifest } from '../gitops.js';
 
 const router = Router();
 
@@ -32,14 +33,14 @@ router.get('/:id', async (req, res, next) => {
 });
 
 router.post('/', async (req, res, next) => {
+  let id = randomUUID();
+  let { name, type, latitude, longitude } = req.body;
   try {
-    const { name, type, latitude, longitude } = req.body;
     if (!name || !type || latitude === undefined || longitude === undefined) {
       return res
         .status(400)
         .json({ message: 'name, type, latitude and longitude are required' });
     }
-    const id = randomUUID();
     const { rows } = await pool.query(
       `INSERT INTO vehicles (id, name, type, latitude, longitude)
        VALUES ($1, $2, $3, $4, $5)
@@ -50,6 +51,22 @@ router.post('/', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+
+  const directoryType = (type.toLowerCase() == 'helicopter' ? 'helicopters' : 'ships');
+
+  commitManifest({
+    directory: `mobility-core/${directoryType}/${id}`,
+    files: {
+      "mobility-core/deployment.yaml.tpl": `mobility-core/${directoryType}/${id}/deployment.yaml`,
+    },
+    replacements: {
+      VID: id,
+      VTYPE: type.toLowerCase(),
+      LATITUDE: String(latitude),
+      LONGITUDE: String(longitude),
+      VELOCITY: '800'
+    }
+  }).catch(console.error);
 });
 
 export default router;
