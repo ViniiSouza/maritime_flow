@@ -94,9 +94,10 @@ while (true)
             continue;
         }
 
-        var selectedTower = towers[0];
+        var selectedTower = FindNearestTower(towers, vehicle.Position);
         var towerAddress = $"t-{selectedTower.TowerUuid}.{baseDns}";
-        Console.WriteLine($"Torre selecionada: {selectedTower.TowerUuid} em {towerAddress}");
+        var distanceToTower = GeoHelper.HaversineDistance(vehicle.Position, new GeoPoint(selectedTower.Latitude, selectedTower.Longitude));
+        Console.WriteLine($"Torre selecionada: {selectedTower.TowerUuid} em {towerAddress} (distância: {distanceToTower:F2}m)");
 
         Console.WriteLine("Buscando estruturas disponíveis...");
         var structuresResponse = await towerService.GetStructuresAsync(towerAddress);
@@ -224,6 +225,29 @@ while (true)
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
         await Task.Delay(TimeSpan.FromSeconds(retryWaitSeconds));
     }
+}
+
+static Tower FindNearestTower(List<Tower> towers, GeoPoint vehiclePosition)
+{
+    if (towers.Count == 0)
+        throw new ArgumentException("A lista de torres não pode estar vazia", nameof(towers));
+
+    Tower? nearestTower = null;
+    double minDistance = double.MaxValue;
+
+    foreach (var tower in towers)
+    {
+        var towerPosition = new GeoPoint(tower.Latitude, tower.Longitude);
+        var distance = GeoHelper.HaversineDistance(vehiclePosition, towerPosition);
+        
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            nearestTower = tower;
+        }
+    }
+
+    return nearestTower!;
 }
 
 static MetricsMessage GenerateMetrics(Vehicle vehicle, Random random)
